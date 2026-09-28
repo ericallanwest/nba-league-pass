@@ -27,7 +27,7 @@
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [lon, lat] },
-      properties: { z: zip, t: `|${abbrs.join("|")}|`, nd: idxs === null },
+      properties: { z: zip, t: `|${abbrs.join("|")}|`, nd: idxs === null, n: idxs ? idxs.length : -1, p: pop ?? -1 },
     };
   });
   const looked = data.zips.filter((z) => z[3] !== null).length;
@@ -39,11 +39,37 @@
     fromHash === null ? teams.map((t) => t.abbr) : fromHash.split(",").filter((a) => teams.some((t) => t.abbr === a))
   );
   const showOther = document.getElementById("show-other");
+  const rings = document.getElementById("rings");
+  const sizePop = document.getElementById("size-pop");
+  const popLo = document.getElementById("pop-lo");
+  const popHi = document.getElementById("pop-hi");
+  // population slider stops; the last position means "no upper limit"
+  const POP_STOPS = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
+  const TOP = POP_STOPS.length;
+  let mode = ["any", "one", "multiple", "none"].includes(params.get("blackouts")) ? params.get("blackouts") : "any";
+  document.querySelector(`#count input[value="${mode}"]`).checked = true;
   if (params.get("other") === "0") showOther.checked = false;
+  if (params.get("rings") === "0") rings.checked = false;
+  if (params.get("size") === "0") sizePop.checked = false;
+  const popParam = (params.get("pop") || "").match(/^(\d+)-(\d*)$/);
+  if (popParam) {
+    const lo = POP_STOPS.indexOf(+popParam[1]);
+    const hi = popParam[2] === "" ? TOP : POP_STOPS.indexOf(+popParam[2]);
+    if (lo >= 0 && hi > lo) { popLo.value = lo; popHi.value = hi; }
+  }
+  const popRange = () => [POP_STOPS[+popLo.value], +popHi.value === TOP ? Infinity : POP_STOPS[+popHi.value]];
+  const popFull = () => +popLo.value === 0 && +popHi.value === TOP;
 
   function writeHash(zip) {
     const p = new URLSearchParams();
     if (selected.size !== teams.length) p.set("teams", [...selected].join(","));
+    if (mode !== "any") p.set("blackouts", mode);
+    if (!popFull()) {
+      const [lo, hi] = popRange();
+      p.set("pop", `${lo}-${hi === Infinity ? "" : hi}`);
+    }
+    if (!rings.checked) p.set("rings", "0");
+    if (!sizePop.checked) p.set("size", "0");
     if (!showOther.checked) p.set("other", "0");
     if (zip) p.set("zip", zip);
     const h = p.toString().replace(/%2C/g, ",");
@@ -73,42 +99,111 @@
   }
   document.getElementById("all").onclick = () => { selected = new Set(teams.map((t) => t.abbr)); update(); };
   document.getElementById("none").onclick = () => { selected = new Set(); update(); };
-  showOther.onchange = update;
+  for (const el of [showOther, rings, sizePop]) el.onchange = update;
+  for (const r of document.querySelectorAll("#count input")) r.onchange = () => { mode = r.value; update(); };
+  for (const el of [popLo, popHi]) {
+    el.oninput = () => {
+      // keep the handles from crossing
+      if (+popLo.value >= +popHi.value) (el === popLo ? (popLo.value = +popHi.value - 1) : (popHi.value = +popLo.value + 1));
+      update();
+    };
+  }
 
   function solo(abbr) {
     selected = new Set([abbr]);
     update();
   }
 
-  // ---- map styling from the selection ----
+  // ---- map styling from the filters ----
+  const NONE_COLOR = "#2a9d8f";
+  const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
+  const COUNT_EXPR = {
+    any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
+    multiple: [">=", ["get", "n"], 2], none: ["==", ["get", "n"], 0],
+  };
   const has = (abbr) => ["in", `|${abbr}|`, ["get", "t"]];
+
   function expressions() {
     const sel = teams.filter((t) => selected.has(t.abbr));
-    const color = sel.length ? ["case", ...sel.flatMap((t) => [has(t.abbr), t.color]), "#888"] : "#888";
     const matches = ["+", 0, 0, ...sel.map((t) => ["case", has(t.abbr), 1, 0])];
-    return { color, matches };
+    const [lo, hi] = popRange();
+    const popCond = popFull() ? true
+      : ["all", [">=", ["get", "p"], lo], ...(hi === Infinity ? [] : [["<=", ["get", "p"], hi]])];
+    const hit = mode === "none"
+      ? ["all", COUNT_EXPR.none, popCond]
+      : ["all", [">", matches, 0], COUNT_EXPR[mode], popCond];
+    const color = mode === "none" ? NONE_COLOR
+      : sel.length ? ["case", ...sel.flatMap((t) => [has(t.abbr), t.color]), "#888"] : "#888";
+    return { hit, other: ["all", ["!", hit], popCond], color, matches };
+  }
+
+  // circle radius: zoom must be the top-level input, so each stop scales by population instead
+  function radius(k) {
+    const f = sizePop.checked
+      ? ["max", 0.55, ["min", 2.6, ["*", 0.009, ["sqrt", ["max", 0, ["get", "p"]]]]]]
+      : 1;
+    const g = sizePop.checked ? 1.5 : 1; // population sizing shrinks most dots, so start larger
+    return ["interpolate", ["linear"], ["zoom"],
+      3, ["*", 1.6 * k * g, f], 6, ["*", 3 * k * g, f], 10, ["*", 6 * k * g, f], 13, ["*", 9 * k * g, f]];
+  }
+
+  function matching() {
+    const [lo, hi] = popRange();
+    let n = 0, people = 0;
+    for (const z of byZip.values()) {
+      if (!z.idxs || !COUNT_TEST[mode](z.idxs.length)) continue;
+      if (mode !== "none" && !z.idxs.some((i) => selected.has(teams[i].abbr))) continue;
+      if (!popFull() && (z.pop == null || z.pop < lo || z.pop > hi)) continue;
+      n++;
+      people += z.pop || 0;
+    }
+    return { n, people };
   }
 
   function update() {
     for (const cb of list.querySelectorAll("input")) cb.checked = selected.has(cb.value);
-    const { color, matches } = expressions();
-    if (map.getLayer("zips-hit")) {
-      map.setFilter("zips-hit", [">", matches, 0]);
-      map.setPaintProperty("zips-hit", "circle-color", color);
-      map.setPaintProperty("zips-hit", "circle-stroke-width", ["case", [">", matches, 1], 1.2, 0]);
-      map.setFilter("zips-other", ["==", matches, 0]);
-      map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
-    }
-    for (const [abbr, el] of markers) el.style.opacity = selected.has(abbr) ? 1 : 0.35;
+    document.getElementById("team-section").classList.toggle("disabled", mode === "none");
 
-    let n = 0;
-    for (const { idxs } of byZip.values()) if (idxs && idxs.some((i) => selected.has(teams[i].abbr))) n++;
+    const [lo, hi] = popRange();
+    const fmt = (v) => v.toLocaleString();
+    document.getElementById("pop-label").textContent = popFull() ? "Any population"
+      : hi === Infinity ? `${fmt(lo)}+ people` : `${fmt(lo)} – ${fmt(hi)} people`;
+    const fill = document.querySelector(".range-fill");
+    fill.style.left = `${(popLo.value / TOP) * 100}%`;
+    fill.style.right = `${100 - (popHi.value / TOP) * 100}%`;
+
+    if (map.getLayer("zips-hit")) {
+      const { hit, other, color, matches } = expressions();
+      map.setFilter("zips-hit", hit);
+      map.setPaintProperty("zips-hit", "circle-color", color);
+      map.setPaintProperty("zips-hit", "circle-stroke-width", mode === "none" ? 0 : ["case", [">", matches, 1], 1.2, 0]);
+      map.setPaintProperty("zips-hit", "circle-radius", radius(1));
+      map.setFilter("zips-other", other);
+      map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
+      map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
+      map.setFilter("rings", ["in", ["get", "abbr"], ["literal", [...selected]]]);
+      map.setLayoutProperty("rings", "visibility", rings.checked && mode !== "none" ? "visible" : "none");
+    }
+    for (const [abbr, el] of markers) el.style.opacity = mode === "none" || selected.has(abbr) ? 1 : 0.35;
+
+    const { n, people } = matching();
     const coverage = looked < data.zips.length
       ? ` Lookup in progress: ${looked.toLocaleString()} of ${data.zips.length.toLocaleString()} ZIPs checked so far.`
       : "";
-    document.getElementById("summary").textContent = selected.size
-      ? `${n.toLocaleString()} ZIPs blacked out for ${selected.size === teams.length ? "any team" : `the ${selected.size} selected team${selected.size > 1 ? "s" : ""}`}.${coverage}`
-      : `Select a team to see its blackout area.${coverage}`;
+    const all = selected.size === teams.length, k = selected.size;
+    const single = k === 1 ? `the ${teams.find((t) => selected.has(t.abbr)).name}` : null;
+    const what = {
+      any: all ? "blacked out for any team" : single ? `blacked out for ${single}` : `blacked out for any of the ${k} selected teams`,
+      one: all ? "blacked out for exactly one team" : single ? `blacked out only for ${single}`
+        : `blacked out for exactly one team, one of the ${k} selected`,
+      multiple: all ? "blacked out for two or more teams" : single ? `blacked out for ${single} and at least one other team`
+        : `blacked out for two or more teams, including one of the ${k} selected`,
+      none: "with no local blackouts",
+    }[mode];
+    const pop = people ? ` (${people.toLocaleString()} people)` : "";
+    document.getElementById("summary").textContent = mode !== "none" && !selected.size
+      ? `Select a team to see its blackout area.${coverage}`
+      : `${n.toLocaleString()} ZIPs ${what}${pop}.${coverage}`;
     writeHash();
   }
 
@@ -204,11 +299,23 @@
     else result.textContent = "Enter a 5-digit ZIP code.";
   });
 
+  // 75-mile circle around an arena, as a geodesic ring
+  function ring(t, radiusMiles = 75, steps = 96) {
+    const r = Math.PI / 180, d = radiusMiles / 3958.8;
+    const lat1 = t.lat * r, lon1 = t.lon * r;
+    const coords = [];
+    for (let i = 0; i <= steps; i++) {
+      const b = (2 * Math.PI * i) / steps;
+      const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(b));
+      const lon2 = lon1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+      coords.push([lon2 / r, lat2 / r]);
+    }
+    return { type: "Feature", properties: { abbr: t.abbr, color: t.color }, geometry: { type: "LineString", coordinates: coords } };
+  }
+
   // ---- layers ----
   mapLoaded.then(() => {
     map.addSource("zips", { type: "geojson", data: { type: "FeatureCollection", features } });
-    // zoom must be the top-level input, so scale the stop values rather than the expression
-    const radius = (k) => ["interpolate", ["linear"], ["zoom"], 3, 1.6 * k, 6, 3 * k, 10, 6 * k, 13, 9 * k];
     map.addLayer({
       id: "zips-other",
       type: "circle",
@@ -228,6 +335,13 @@
         "circle-opacity": 0.85,
         "circle-stroke-color": dark ? "#fff" : "#000",
       },
+    });
+    map.addSource("rings", { type: "geojson", data: { type: "FeatureCollection", features: teams.map((t) => ring(t)) } });
+    map.addLayer({
+      id: "rings",
+      type: "line",
+      source: "rings",
+      paint: { "line-color": ["get", "color"], "line-width": 1.8, "line-opacity": 0.9 },
     });
     for (const layer of ["zips-hit", "zips-other"]) {
       map.on("click", layer, (e) => showZip(e.features[0].properties.z));

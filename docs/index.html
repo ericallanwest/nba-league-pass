@@ -25,6 +25,26 @@
     </form>
 
     <section>
+      <h2>Blacked-out teams per ZIP</h2>
+      <div id="count" class="segmented" role="radiogroup" aria-label="Number of teams blacked out">
+        <label><input type="radio" name="count" value="any" checked><span>All</span></label>
+        <label><input type="radio" name="count" value="one"><span>One</span></label>
+        <label><input type="radio" name="count" value="multiple"><span>Multiple</span></label>
+        <label><input type="radio" name="count" value="none"><span>None</span></label>
+      </div>
+
+      <h2>ZIP population</h2>
+      <div class="range">
+        <div class="range-track"><div class="range-fill"></div></div>
+        <input type="range" id="pop-lo" min="0" max="11" step="1" value="0" aria-label="Minimum population">
+        <input type="range" id="pop-hi" min="0" max="11" step="1" value="11" aria-label="Maximum population">
+      </div>
+      <p id="pop-label" class="range-label"></p>
+
+      <p id="summary" aria-live="polite"></p>
+    </section>
+
+    <section id="team-section">
       <div class="section-head">
         <h2>Teams</h2>
         <div class="bulk">
@@ -32,9 +52,13 @@
           <button type="button" id="none">None</button>
         </div>
       </div>
-      <p id="summary" aria-live="polite"></p>
       <ul id="teams"></ul>
-      <label class="toggle"><input type="checkbox" id="show-other" checked> Show ZIPs without a selected team's blackout</label>
+    </section>
+
+    <section class="toggles">
+      <label class="toggle"><input type="checkbox" id="rings" checked> 75-mile radius around arenas</label>
+      <label class="toggle"><input type="checkbox" id="size-pop" checked> Size ZIPs by population</label>
+      <label class="toggle"><input type="checkbox" id="show-other" checked> Show ZIPs outside the filter</label>
     </section>
 
     <details id="notes">
@@ -44,7 +68,8 @@
         <li>Points are the Census Bureau's 2025 ZIP Code Tabulation Areas (TIGER/Line), plotted at each area's internal point. ZCTAs approximate USPS ZIP codes, and PO-box-only ZIPs aren't included.</li>
         <li>Town and state are the USPS city name for each ZIP (via the <a href="https://pypi.org/project/zipcodes/">zipcodes</a> package). Population is from the Census Bureau's American Community Survey<span id="pop-source"></span>.</li>
         <li>Closest teams are ranked by typical drive time without traffic, from <a href="https://openrouteservice.org">openrouteservice</a> (© OpenStreetMap contributors), from each ZIP's center point to the arena. Miles are straight-line. ZIPs with no road route to an arena (Alaska, Hawaii, territories) list the nearest arenas in a straight line.</li>
-        <li>A ZIP ringed in black is blacked out for two or more of the selected teams.</li>
+        <li>A ZIP ringed in black is blacked out for two or more of the selected teams. <em>One</em> and <em>Multiple</em> count all of a ZIP's blacked-out teams, not just the selected ones; <em>None</em> shows ZIPs with no local blackout.</li>
+        <li>Rings show a 75-mile radius around each selected team's arena, for comparison with its blackout area.</li>
         <li>Puerto Rico and a few other ZIPs aren't recognized by NBA.com, so they show as no data.</li>
         <li>Nationally televised games have their own blackouts, which this map doesn't cover.</li>
         <li>Data last built <span id="updated">—</span>. Code and data: <a href="https://github.com/ericallanwest/nba-league-pass">github.com/ericallanwest/nba-league-pass</a>.</li>
