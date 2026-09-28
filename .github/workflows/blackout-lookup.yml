@@ -2,7 +2,8 @@ name: Blackout lookup
 
 # Looks up NBA League Pass blackout teams for every ZCTA in data/all_zctas.txt,
 # committing data/nba_blackouts.csv (and the site JSON) after each chunk so
-# progress survives a cancelled or timed-out run. Re-run to resume.
+# progress survives a cancelled or timed-out run. Re-run to resume, or to
+# rebuild the site JSON after other data (population, drive times) changes.
 on:
   workflow_dispatch:
     inputs:
@@ -66,14 +67,14 @@ jobs:
           while [ "$before" -gt 0 ] && [ $((SECONDS - start)) -lt "$BUDGET" ]; do
             echo "::group::$before ZIPs remaining"
             python scripts/nba_blackouts.py data/all_zctas.txt -o data/nba_blackouts.csv -d "$DELAY" --limit "$CHUNK"
-            python scripts/build_site_data.py
             after=$(remaining)
-            git add data/nba_blackouts.csv docs/data/blackouts.json
-            git commit -m "Blackout lookup: $after of $(wc -l < data/all_zctas.txt) ZIPs remaining" || true
-            git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME"
+            scripts/publish.sh "Blackout lookup: $after of $(wc -l < data/all_zctas.txt) ZIPs remaining" data/nba_blackouts.csv
             echo "::endgroup::"
             # a chunk that finished nothing new means every remaining ZIP is failing; stop and let a later run retry
             [ "$after" -lt "$before" ] || { echo "::warning::No progress in last chunk; $after ZIPs still failing"; break; }
             before=$after
           done
+          # rebuild the site JSON even when there was nothing to look up, so a re-run
+          # also publishes other data changes (population, drive times)
+          scripts/publish.sh "Rebuild site data"
           echo "Done: $(remaining) ZIPs remaining" >> "$GITHUB_STEP_SUMMARY"

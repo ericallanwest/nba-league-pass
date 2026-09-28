@@ -8,8 +8,10 @@ Output shape (arrays instead of objects to keep the file small):
       "updated": "YYYY-MM-DD",
       "teams": [{"abbr", "city", "name", "arena", "lat", "lon", "color"}, ...],
       "population_source": "ACS 2024 5-year" | null,
-      "zips": [[zip, lat, lon, team_idx_list | null, "Town, ST", population | null], ...]
+      "zips": [[zip, lat, lon, team_idx_list | null, "Town, ST", population | null, drives | null], ...]
     }
+drives is [[team_idx, minutes], ...] for the closest arenas by drive time,
+[] if the ZIP can't be routed, and null if drive times haven't been computed.
 team_idx_list is [] for a ZIP NBA.com says has no blackout, and null for a ZIP
 with no data (not yet looked up, or unknown to NBA.com, e.g. Puerto Rico).
 """
@@ -49,10 +51,15 @@ def main():
     # the Census API uses negative sentinel values for "no estimate"
     population = {r["zip"]: int(r["population"]) for r in pop_rows if r["population"].lstrip("-").isdigit() and int(r["population"]) >= 0}
 
+    drives = {}
+    for r in read_csv("drive_times.csv", optional=True):
+        pairs = [d.split(":") for d in r["drives"].split("|") if d]
+        drives[r["zip"]] = [[idx[a], int(m)] for a, m in pairs]
+
     zips = []
     for r in read_csv("zcta_centroids.csv"):
         z = r["zip"]
-        zips.append([z, round(float(r["lat"]), 4), round(float(r["lon"]), 4), blackouts.get(z), places.get(z, ""), population.get(z)])
+        zips.append([z, round(float(r["lat"]), 4), round(float(r["lon"]), 4), blackouts.get(z), places.get(z, ""), population.get(z), drives.get(z)])
 
     out = {
         "updated": datetime.date.today().isoformat(),

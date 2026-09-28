@@ -1,7 +1,8 @@
 name: ZCTA population
 
 # Fetches population per ZCTA from the Census ACS API and commits
-# data/zcta_population.csv. The site JSON picks it up on its next rebuild.
+# data/zcta_population.csv. The site JSON picks it up on the Blackout lookup
+# workflow's next rebuild (re-run that workflow to publish right away).
 on:
   workflow_dispatch:
   push:
@@ -28,4 +29,5 @@ jobs:
           git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
           git add data/zcta_population.csv
           git commit -m "Update ZCTA population from Census ACS" || exit 0
-          git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME"
+          for i in 1 2 3; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0; sleep 5; done
+          exit 1

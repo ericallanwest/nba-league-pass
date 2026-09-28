@@ -20,8 +20,8 @@
   // ZIP lookup + per-team counts. t is "|BOS|NYK|" so map filters can match with a substring test.
   const byZip = new Map();
   const counts = teams.map(() => 0);
-  const features = data.zips.map(([zip, lat, lon, idxs, place, pop]) => {
-    byZip.set(zip, { lat, lon, idxs, place, pop });
+  const features = data.zips.map(([zip, lat, lon, idxs, place, pop, drives]) => {
+    byZip.set(zip, { lat, lon, idxs, place, pop, drives });
     if (idxs) idxs.forEach((i) => counts[i]++);
     const abbrs = idxs ? idxs.map((i) => teams[i].abbr) : [];
     return {
@@ -147,6 +147,7 @@
       Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(((lon2 - lon1) * r) / 2) ** 2;
     return 3958.8 * 2 * Math.asin(Math.sqrt(a));
   }
+  const duration = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} hr ${m % 60} min`);
   const row = (label, value) => `<div><span class="label">${label}:</span> ${value}</div>`;
 
   function describe(zip) {
@@ -160,16 +161,22 @@
     const blackout = !z.idxs ? "No data from NBA.com"
       : z.idxs.length ? z.idxs.map((i) => teams[i].name).join("/")
       : "None";
-    const closest = teams
-      .map((t) => ({ name: t.name, d: miles(z.lat, z.lon, t.lat, t.lon) }))
-      .sort((a, b) => a.d - b.d)
-      .slice(0, 5)
-      .map((t) => `<div>${t.name}: ${Math.round(t.d).toLocaleString()} Miles</div>`)
-      .join("");
+    const mi = (t) => Math.round(miles(z.lat, z.lon, t.lat, t.lon)).toLocaleString();
+    let closest, heading = "Closest Teams";
+    if (z.drives && z.drives.length) {
+      closest = z.drives.map(([i, m]) => `<div>${teams[i].name}: ${duration(m)} <span class="label">(${mi(teams[i])} mi)</span></div>`);
+    } else {
+      if (z.drives) heading += ' <span class="label">(straight line)</span>'; // computed, but no road route
+      closest = teams
+        .map((t) => ({ t, d: miles(z.lat, z.lon, t.lat, t.lon) }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, 5)
+        .map(({ t }) => `<div>${t.name}: ${mi(t)} Miles</div>`);
+    }
     return `<div class="title">${title}</div>` +
       row("Population", z.pop != null ? z.pop.toLocaleString() : "—") +
       row("Blackout Team(s)", blackout) +
-      `<div class="title closest">Closest Teams</div>${closest}`;
+      `<div class="title closest">${heading}</div>${closest.join("")}`;
   }
   function showZip(zip) {
     const z = byZip.get(zip);
