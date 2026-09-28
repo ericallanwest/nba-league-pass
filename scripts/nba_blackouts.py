@@ -5,6 +5,7 @@ Uses the same JSON endpoint the form on nba.com/league-pass-purchase calls.
 Usage:
     python nba_blackouts.py zips.txt                 # one ZIP per line (or a CSV whose first column is the ZIP)
     python nba_blackouts.py zips.txt -o out.csv -d 0.5
+    python nba_blackouts.py zips.txt -o out.csv --limit 3000   # stop after 3,000 lookups
 
 The output CSV is appended to as it goes, so if the run is interrupted,
 re-running the same command skips ZIPs already done.
@@ -63,11 +64,14 @@ def main():
     ap.add_argument("zipfile")
     ap.add_argument("-o", "--out", default="nba_blackouts.csv")
     ap.add_argument("-d", "--delay", type=float, default=0.5, help="seconds between requests")
+    ap.add_argument("--limit", type=int, default=0, help="stop after this many lookups (0 = no limit)")
     args = ap.parse_args()
 
     zips = load_zips(args.zipfile)
     done = already_done(args.out)
     todo = [z for z in zips if z not in done]
+    if args.limit:
+        todo = todo[:args.limit]
     print(f"{len(zips)} ZIPs, {len(done)} already done, {len(todo)} to go", file=sys.stderr)
 
     new_file = not os.path.exists(args.out)
@@ -92,6 +96,18 @@ def main():
                 f.flush()
                 print(f"  {i}/{len(todo)}", file=sys.stderr)
             time.sleep(args.delay)
+
+    dedupe(args.out)
+
+
+def dedupe(out_path):
+    # keep the last row per ZIP (a retry supersedes the earlier failure), sorted by ZIP
+    with open(out_path, newline="", encoding="utf-8") as f:
+        rows = {r["zip"]: r for r in csv.DictReader(f)}
+    with open(out_path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows(rows[z] for z in sorted(rows))
 
 
 if __name__ == "__main__":
