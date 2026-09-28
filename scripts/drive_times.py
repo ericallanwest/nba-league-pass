@@ -2,9 +2,9 @@
 OpenRouteService Matrix API, writing data/drive_times.csv.
 
 For each ZIP, the 8 arenas closest in a straight line are routed, and the 5
-shortest drives are kept. ZIPs are grouped by nearest arena so each request
-covers a compact area with few distinct arenas, keeping requests well under
-ORS's routes-per-request limit.
+shortest drives are kept. ZIPs are grouped by their set of candidate arenas so
+requests don't route pairs nobody needs; the free plan's daily quota covers
+roughly half the country, so a full run takes two days.
 
 Usage (needs a free key from openrouteservice.org):
     ORS_API_KEY=... python scripts/drive_times.py [--max-requests 450]
@@ -12,7 +12,7 @@ Usage (needs a free key from openrouteservice.org):
 Output rows: zip, drives. drives is "ABBR:minutes|..." sorted by drive time,
 or empty if ORS couldn't route the ZIP (e.g. no road near its center point).
 Appends as it goes and skips ZIPs already done, so a run cut short by the
-daily request quota resumes where it stopped.
+daily quota resumes where it stopped.
 """
 import argparse
 import csv
@@ -54,6 +54,7 @@ class Matrix:
         self.session = requests.Session()
         self.session.headers["Authorization"] = key
         self.left = max_requests
+        self.routes = 0
         self.pause = pause
 
     def __call__(self, origins, arenas):
@@ -69,13 +70,14 @@ class Matrix:
             if self.left <= 0:
                 raise Budget()
             self.left -= 1
+            self.routes += len(origins) * len(arenas)
             r = self.session.post(API, json=body, timeout=120)
             time.sleep(self.pause)
             if r.status_code == 200:
                 return [[None if s is None else round(s / 60) for s in row] for row in r.json()["durations"]]
-            if r.status_code == 429:
-                if "quota" in r.text.lower():
-                    raise Budget()
+            if "quota" in r.text.lower():  # daily quota, sent as 403 or 429
+                raise Budget()
+            if r.status_code == 429:  # per-minute rate limit
                 time.sleep(60)
                 continue
             if r.status_code >= 500:
@@ -118,7 +120,7 @@ def route(matrix, batch, teams):
 
 
 def batches(todo):
-    """Group ZIPs (already sorted by nearest arena, then position) so that
+    """Group ZIPs (already sorted by candidate arenas) so that
     ZIP count x distinct arenas stays within MAX_ROUTES."""
     batch, arenas = [], set()
     for z in todo:
@@ -157,7 +159,8 @@ def main():
         lat, lon = float(r["lat"]), float(r["lon"])
         by_dist = sorted(range(len(teams)), key=lambda i: miles(lat, lon, teams[i]["lat"], teams[i]["lon"]))
         todo.append({"zip": r["zip"], "lat": lat, "lon": lon, "cands": by_dist[:CANDIDATES]})
-    todo.sort(key=lambda z: (z["cands"][0], round(z["lat"]), z["lon"]))
+    # ZIPs with the same candidate arenas share requests with no wasted routes
+    todo.sort(key=lambda z: (sorted(z["cands"]), z["lat"]))
     print(f"{len(done)} done, {len(skipped)} with no road route, {len(todo)} to route", file=sys.stderr)
 
     new_file = not os.path.exists(OUT)
@@ -175,9 +178,11 @@ def main():
                     w.writerow(row)
                     n += 1
                 f.flush()
-                print(f"  {n}/{len(todo)} routed, {matrix.left} requests left", file=sys.stderr)
+                print(f"  {n}/{len(todo)} routed, {matrix.routes} routes used, {matrix.left} requests left", file=sys.stderr)
         except Budget:
-            print(f"Request budget used up with {len(todo) - n} ZIPs left; re-run to continue", file=sys.stderr)
+            # not an error: progress is saved, and the next run resumes
+            print(f"::warning::ORS quota or request budget used up after {matrix.routes} routes, "
+                  f"with {len(todo) - n} ZIPs left; re-run tomorrow to continue", file=sys.stderr)
 
     # tidy: one row per ZIP, sorted
     with open(OUT, newline="", encoding="utf-8") as f:

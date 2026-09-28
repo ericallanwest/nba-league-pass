@@ -2,8 +2,9 @@ name: Drive times
 
 # Computes drive times from every ZIP to its closest arenas with the
 # OpenRouteService Matrix API and commits data/drive_times.csv. Needs the
-# repository secret ORS_API_KEY. Resumes where it left off, so if the daily
-# request quota runs out, re-run it the next day. The site JSON picks up the
+# repository secret ORS_API_KEY. The free plan's daily quota covers about
+# half the ZIPs, so it also runs daily and resumes where it left off; once
+# every ZIP is done, those runs make no API calls. The site JSON picks up the
 # new CSV on the Blackout lookup workflow's next rebuild (re-run that workflow
 # to publish right away).
 on:
@@ -12,6 +13,8 @@ on:
       max_requests:
         description: Max API requests this run (free plan allows 500/day)
         default: "450"
+  schedule:
+    - cron: "17 7 * * *"   # daily, after ORS's quota resets
   push:
     paths:
       - .github/workflows/drive-times.yml
