@@ -10,7 +10,8 @@ Output shape (arrays instead of objects to keep the file small):
       "population_source": "ACS 2024 5-year" | null,
       "zips": [[zip, lat, lon, team_idx_list | null, "Town, ST", population | null, drives | null], ...]
     }
-drives is [[team_idx, minutes], ...] for the closest arenas by drive time,
+drives is [[team_idx, minutes, miles | null], ...] for the closest arenas by
+drive time (miles by road; null in older rows computed without distance),
 [] if the ZIP can't be routed, and null if drive times haven't been computed.
 team_idx_list is [] for a ZIP NBA.com says has no blackout, and null for a ZIP
 with no data (not yet looked up, or unknown to NBA.com, e.g. Puerto Rico).
@@ -53,8 +54,8 @@ def main():
 
     drives = {}
     for r in read_csv("drive_times.csv", optional=True):
-        pairs = [d.split(":") for d in r["drives"].split("|") if d]
-        drives[r["zip"]] = [[idx[a], int(m)] for a, m in pairs]
+        parts = [d.split(":") for d in r["drives"].split("|") if d]
+        drives[r["zip"]] = [[idx[p[0]], int(p[1]), int(p[2]) if len(p) > 2 else None] for p in parts]
 
     zips = []
     for r in read_csv("zcta_centroids.csv"):

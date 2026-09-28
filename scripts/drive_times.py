@@ -9,8 +9,10 @@ roughly half the country, so a full run takes two days.
 Usage (needs a free key from openrouteservice.org):
     ORS_API_KEY=... python scripts/drive_times.py [--max-requests 450]
 
-Output rows: zip, drives. drives is "ABBR:minutes|..." sorted by drive time,
-or empty if ORS couldn't route the ZIP (e.g. no road near its center point).
+Output rows: zip, drives. drives is "ABBR:minutes:miles|..." (driving time and
+distance) sorted by drive time, or empty if ORS couldn't route the ZIP (e.g. no
+road near its center point). Rows in the older "ABBR:minutes" form, without
+distance, are routed again.
 Appends as it goes and skips ZIPs already done, so a run cut short by the
 daily quota resumes where it stopped.
 """
@@ -58,13 +60,14 @@ class Matrix:
         self.pause = pause
 
     def __call__(self, origins, arenas):
-        """Minutes from each origin (lat, lon) to each arena, or None if unroutable.
+        """(minutes, miles) by road from each origin (lat, lon) to each arena, or None if unroutable.
         Raises Unroutable if ORS rejects the batch (typically one bad location)."""
         body = {
             "locations": [[lon, lat] for lat, lon in origins] + [a["route"] for a in arenas],
             "sources": list(range(len(origins))),
             "destinations": list(range(len(origins), len(origins) + len(arenas))),
-            "metrics": ["duration"],
+            "metrics": ["duration", "distance"],
+            "units": "mi",
         }
         for attempt in range(5):
             if self.left <= 0:
@@ -74,7 +77,9 @@ class Matrix:
             r = self.session.post(API, json=body, timeout=120)
             time.sleep(self.pause)
             if r.status_code == 200:
-                return [[None if s is None else round(s / 60) for s in row] for row in r.json()["durations"]]
+                d = r.json()
+                return [[None if s is None or m is None else (round(s / 60), round(m)) for s, m in zip(srow, mrow)]
+                        for srow, mrow in zip(d["durations"], d["distances"])]
             if "quota" in r.text.lower():  # daily quota, sent as 403 or 429
                 raise Budget()
             if r.status_code == 429:  # per-minute rate limit
@@ -120,8 +125,8 @@ def route(matrix, batch, teams):
                       f"set route_lat/route_lon in data/teams.csv to a point on a road by the arena", file=sys.stderr)
     for z, row in zip(batch, minutes):
         col = {i: m for i, m in zip(arena_idx, row)}
-        drives = sorted((col[i], teams[i]["abbr"]) for i in z["cands"] if col[i] is not None)[:KEEP]
-        yield z["zip"], "|".join(f"{abbr}:{m}" for m, abbr in drives)
+        drives = sorted((*col[i], teams[i]["abbr"]) for i in z["cands"] if col[i] is not None)[:KEEP]
+        yield z["zip"], "|".join(f"{abbr}:{m}:{mi}" for m, mi, abbr in drives)
 
 
 def check_arenas(matrix, teams):
@@ -175,7 +180,9 @@ def main():
     states = {r["zip"]: r["state"] for r in read_csv("zcta_places.csv")}
     done = set()
     if os.path.exists(OUT):
-        done = {r["zip"] for r in csv.DictReader(open(OUT, newline="", encoding="utf-8"))}
+        # rows without driving distance (the older ABBR:minutes form) get routed again
+        done = {r["zip"] for r in csv.DictReader(open(OUT, newline="", encoding="utf-8"))
+                if all(d.count(":") == 2 for d in r["drives"].split("|") if d)}
 
     todo, skipped = [], []
     for r in read_csv("zcta_centroids.csv"):
