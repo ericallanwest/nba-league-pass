@@ -1,0 +1,33 @@
+name: ZCTA population
+
+# Fetches population per ZCTA from the Census ACS API and commits
+# data/zcta_population.csv. The site JSON picks it up on the Blackout lookup
+# workflow's next rebuild (re-run that workflow to publish right away).
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/population.yml
+      - scripts/fetch_population.py
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - run: python scripts/fetch_population.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
+          git add data/zcta_population.csv
+          git commit -m "Update ZCTA population from Census ACS" || exit 0
+          for i in 1 2 3; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0; sleep 5; done
+          exit 1

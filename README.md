@@ -7,6 +7,9 @@ Interactive web map (GitHub Pages, served from `docs/`) showing which NBA teams 
 - `data/all_zctas.txt`: 33,791 ZIP Code Tabulation Areas from the Census Bureau's 2025 TIGER/Line ZCTA file (`tl_2025_us_zcta520`).
 - `data/zcta_centroids.csv`: internal point (lat/lon) for each ZCTA, from the same file.
 - `data/teams.csv`: the 30 teams with NBA.com team IDs, arena locations (for the map markers) and map colors.
+- `data/zcta_places.csv`: USPS town, state and county for each ZIP, from the offline data in the [`zipcodes`](https://pypi.org/project/zipcodes/) package (`python scripts/fetch_zcta_places.py`).
+- `data/zcta_population.csv`: population per ZCTA from the Census Bureau's ACS 5-year estimates (table B01003), fetched by the **ZCTA population** workflow (`scripts/fetch_population.py`).
+- `data/drive_times.csv`: drive time in minutes from each ZIP to its 5 closest arenas by road (`ABBR:minutes|...`), from the [OpenRouteService](https://openrouteservice.org) Matrix API, computed by the **Drive times** workflow (`scripts/drive_times.py`). It needs the repository secret `ORS_API_KEY` (a free openrouteservice.org key). The free plan's daily quota covers roughly half the ZIPs, so the workflow also runs daily and resumes where it left off. A full set takes about two days, and after that the daily run makes no API calls.
 - `data/nba_blackouts.csv`: blackout teams per ZIP, from NBA.com's lookup endpoint
   `https://content-api-prod.nba.com/public/1/leagues/nba/blackouts?zip=XXXXX`
   (the endpoint behind the form at nba.com/league-pass-purchase).
@@ -25,6 +28,8 @@ To publish, go to **Settings → Pages** and set the source to *Deploy from a br
 Views can be shared by URL: `#teams=NYK,BKN&zip=10001`.
 
 ## Refreshing the data
+
+The population and drive-time workflows commit only their CSVs. The site JSON is rebuilt by the Blackout lookup workflow after each chunk, and once more at the end of every run, so re-running Blackout lookup publishes any data changes.
 
 The **Blackout lookup** GitHub Actions workflow (`.github/workflows/blackout-lookup.yml`) runs the lookup below in chunks of 2,500 ZIPs, rebuilding the site JSON and committing after each chunk. It stops after about 5.5 hours, so re-run it (Actions → Blackout lookup → Run workflow) until the job summary reports 0 ZIPs remaining. Re-runs also retry any ZIPs that failed.
 
