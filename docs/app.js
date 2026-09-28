@@ -263,17 +263,19 @@
     const blackout = !z.idxs ? "No data from NBA.com"
       : z.idxs.length ? z.idxs.map((i) => teams[i].name).join("/")
       : "None";
-    const mi = (t) => Math.round(miles(z.lat, z.lon, t.lat, t.lon)).toLocaleString();
+    const crow = (t) => Math.round(miles(z.lat, z.lon, t.lat, t.lon)).toLocaleString();
     let closest, heading = "Closest Teams";
     if (z.drives && z.drives.length) {
-      closest = z.drives.map(([i, m]) => `<div>${teams[i].name}: ${duration(m)} <span class="label">(${mi(teams[i])} mi)</span></div>`);
+      // miles by road when the data has them; older rows only have drive time
+      closest = z.drives.map(([i, m, mi]) => `<div>${teams[i].name}: ${duration(m)} <span class="label">(${
+        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})</span></div>`);
     } else {
-      if (z.drives) heading += ' <span class="label">(straight line)</span>'; // computed, but no road route
+      heading += ' <span class="label">(straight line)</span>';
       closest = teams
         .map((t) => ({ t, d: miles(z.lat, z.lon, t.lat, t.lon) }))
         .sort((a, b) => a.d - b.d)
         .slice(0, 5)
-        .map(({ t }) => `<div>${t.name}: ${mi(t)} Miles</div>`);
+        .map(({ t }) => `<div>${t.name}: ${crow(t)} Miles</div>`);
     }
     return `<div class="title">${title}</div>` +
       row("Population", z.pop != null ? z.pop.toLocaleString() : "—") +
