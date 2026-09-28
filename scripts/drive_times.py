@@ -61,7 +61,7 @@ class Matrix:
         """Minutes from each origin (lat, lon) to each arena, or None if unroutable.
         Raises Unroutable if ORS rejects the batch (typically one bad location)."""
         body = {
-            "locations": [[lon, lat] for lat, lon in origins] + [[a["lon"], a["lat"]] for a in arenas],
+            "locations": [[lon, lat] for lat, lon in origins] + [a["route"] for a in arenas],
             "sources": list(range(len(origins))),
             "destinations": list(range(len(origins), len(origins) + len(arenas))),
             "metrics": ["duration"],
@@ -113,6 +113,11 @@ def route(matrix, batch, teams):
         yield from route(matrix, batch[:mid], teams)
         yield from route(matrix, batch[mid:], teams)
         return
+    if len(batch) >= 20:
+        for j, a in enumerate(arenas):
+            if all(row[j] is None for row in minutes):
+                print(f"::warning::No route from any of {len(batch)} ZIPs to {a['abbr']}; "
+                      f"set route_lat/route_lon in data/teams.csv to a point on a road by the arena", file=sys.stderr)
     for z, row in zip(batch, minutes):
         col = {i: m for i, m in zip(arena_idx, row)}
         drives = sorted((col[i], teams[i]["abbr"]) for i in z["cands"] if col[i] is not None)[:KEEP]
@@ -144,6 +149,9 @@ def main():
         raise SystemExit("set ORS_API_KEY")
 
     teams = [{**t, "lat": float(t["lat"]), "lon": float(t["lon"])} for t in read_csv("teams.csv")]
+    for t in teams:
+        # route to a point on a public road by the arena when the arena's own point doesn't snap to one
+        t["route"] = [float(t["route_lon"]), float(t["route_lat"])] if t.get("route_lat") else [t["lon"], t["lat"]]
     states = {r["zip"]: r["state"] for r in read_csv("zcta_places.csv")}
     done = set()
     if os.path.exists(OUT):
