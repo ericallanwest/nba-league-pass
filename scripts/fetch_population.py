@@ -21,13 +21,15 @@ def main():
             params={"get": "B01003_001E", "for": "zip code tabulation area:*"},
             timeout=120,
         )
-        if r.status_code == 200:
+        # an unpublished year can come back as HTTP 200 with an HTML error page
+        try:
+            header, *rows = r.json()
             break
-        print(f"ACS {year}: HTTP {r.status_code}", file=sys.stderr)
+        except ValueError:
+            print(f"ACS {year}: HTTP {r.status_code}, not JSON: {r.text[:200]!r}", file=sys.stderr)
     else:
         raise SystemExit("no ACS 5-year data found")
 
-    header, *rows = r.json()
     pop, zcta = header.index("B01003_001E"), header.index("zip code tabulation area")
     with open(OUT, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)

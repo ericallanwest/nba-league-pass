@@ -127,16 +127,49 @@
   update(); // fill the sidebar now; map layers pick up the selection on load
 
   // ---- popups ----
-  const popup = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" });
+  const popup = new maplibregl.Popup({ closeButton: true, maxWidth: "320px" });
+  const STATES = {
+    AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado",
+    CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia",
+    HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky",
+    LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota",
+    MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire",
+    NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota",
+    OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island",
+    SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+    VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+    PR: "Puerto Rico", VI: "U.S. Virgin Islands", GU: "Guam", AS: "American Samoa", MP: "Northern Mariana Islands",
+  };
+  // great-circle distance in miles
+  function miles(lat1, lon1, lat2, lon2) {
+    const r = Math.PI / 180;
+    const a = Math.sin(((lat2 - lat1) * r) / 2) ** 2 +
+      Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(((lon2 - lon1) * r) / 2) ** 2;
+    return 3958.8 * 2 * Math.asin(Math.sqrt(a));
+  }
+  const row = (label, value) => `<div><span class="label">${label}:</span> ${value}</div>`;
+
   function describe(zip) {
     const z = byZip.get(zip);
-    let head = `<b>ZIP ${zip}</b>`;
-    if (z.place) head += `<br>${z.place}`;
-    if (z.pop != null) head += `<br><span class="pop">Population ${z.pop.toLocaleString()}</span>`;
-    if (!z.idxs) return `${head}<p>No data from NBA.com for this ZIP.</p>`;
-    if (!z.idxs.length) return `${head}<p>No local blackouts. Every team is available on League Pass.</p>`;
-    const items = z.idxs.map((i) => `<li>${teams[i].city} ${teams[i].name}</li>`).join("");
-    return `${head}<p>Blacked out on League Pass:</p><ul>${items}</ul>`;
+    let title = `ZIP ${zip}`;
+    if (z.place) {
+      const cut = z.place.lastIndexOf(", ");
+      const st = z.place.slice(cut + 2);
+      title = `${z.place.slice(0, cut)}, ${STATES[st] || st} (${zip})`;
+    }
+    const blackout = !z.idxs ? "No data from NBA.com"
+      : z.idxs.length ? z.idxs.map((i) => teams[i].name).join("/")
+      : "None";
+    const closest = teams
+      .map((t) => ({ name: t.name, d: miles(z.lat, z.lon, t.lat, t.lon) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 5)
+      .map((t) => `<div>${t.name}: ${Math.round(t.d).toLocaleString()} Miles</div>`)
+      .join("");
+    return `<div class="title">${title}</div>` +
+      row("Population", z.pop != null ? z.pop.toLocaleString() : "—") +
+      row("Blackout Team(s)", blackout) +
+      `<div class="title closest">Closest Teams</div>${closest}`;
   }
   function showZip(zip) {
     const z = byZip.get(zip);
