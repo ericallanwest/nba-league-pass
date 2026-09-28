@@ -124,6 +124,25 @@ def route(matrix, batch, teams):
         yield z["zip"], "|".join(f"{abbr}:{m}" for m, abbr in drives)
 
 
+def check_arenas(matrix, teams):
+    """Route every arena to every other one (one request). An arena that no other
+    arena can reach, or be reached from, would silently drop out of every ZIP's
+    results, so stop before routing anything."""
+    try:
+        minutes = matrix([(t["route"][1], t["route"][0]) for t in teams], teams)
+    except Unroutable as e:
+        raise SystemExit(f"::error::ORS rejected an arena point ({e}); "
+                         "set route_lat/route_lon in data/teams.csv to a point on a public road by the arena")
+    n = len(teams)
+    bad = [t["abbr"] for i, t in enumerate(teams)
+           if all(minutes[i][j] is None for j in range(n) if j != i)
+           and all(minutes[j][i] is None for j in range(n) if j != i)]
+    if bad:
+        raise SystemExit(f"::error::No route to or from {', '.join(bad)}; set route_lat/route_lon in "
+                         "data/teams.csv to a point on a public road by the arena")
+    print(f"All {n} arenas reachable", file=sys.stderr)
+
+
 def batches(todo):
     """Group ZIPs (already sorted by candidate arenas) so that
     ZIP count x distinct arenas stays within MAX_ROUTES."""
@@ -143,6 +162,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-requests", type=int, default=450, help="stop after this many API calls (free plan: 500/day)")
     ap.add_argument("--pause", type=float, default=1.6, help="seconds between calls (free plan: 40/minute)")
+    ap.add_argument("--check-arenas", action="store_true", help="only check that every arena is reachable")
     args = ap.parse_args()
     key = os.environ.get("ORS_API_KEY")
     if not key:
@@ -173,6 +193,14 @@ def main():
 
     new_file = not os.path.exists(OUT)
     matrix = Matrix(key, args.max_requests, args.pause)
+    if todo or args.check_arenas:
+        try:
+            check_arenas(matrix, teams)
+        except Budget:
+            print("::warning::ORS quota used up before the arena check; re-run tomorrow", file=sys.stderr)
+            return
+    if args.check_arenas:
+        return
     n = 0
     with open(OUT, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
