@@ -6,6 +6,8 @@ name: ZCTA population
 on:
   workflow_dispatch:
   push:
+    # main only: a push to a PR branch must not start a second data run
+    branches: [main]
     paths:
       - .github/workflows/population.yml
       - scripts/fetch_population.py
