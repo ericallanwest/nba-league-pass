@@ -7,6 +7,8 @@ Interactive web map (GitHub Pages, served from `docs/`) showing which NBA teams 
 - `data/all_zctas.txt`: 33,791 ZIP Code Tabulation Areas from the Census Bureau's 2025 TIGER/Line ZCTA file (`tl_2025_us_zcta520`).
 - `data/zcta_centroids.csv`: internal point (lat/lon) for each ZCTA, from the same file.
 - `data/teams.csv`: the 30 teams with NBA.com team IDs, arena locations (for the map markers) and map colors.
+- `data/zcta_places.csv`: USPS town, state and county for each ZIP, from the offline data in the [`zipcodes`](https://pypi.org/project/zipcodes/) package (`python scripts/fetch_zcta_places.py`).
+- `data/zcta_population.csv`: population per ZCTA from the Census Bureau's ACS 5-year estimates (table B01003), fetched by the **ZCTA population** workflow (`scripts/fetch_population.py`).
 - `data/nba_blackouts.csv`: blackout teams per ZIP, from NBA.com's lookup endpoint
   `https://content-api-prod.nba.com/public/1/leagues/nba/blackouts?zip=XXXXX`
   (the endpoint behind the form at nba.com/league-pass-purchase).

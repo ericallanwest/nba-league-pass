@@ -15,12 +15,13 @@
   const data = await (await fetch("data/blackouts.json")).json();
   const teams = data.teams;
   document.getElementById("updated").textContent = data.updated;
+  if (data.population_source) document.getElementById("pop-source").textContent = ` (${data.population_source})`;
 
   // ZIP lookup + per-team counts. t is "|BOS|NYK|" so map filters can match with a substring test.
   const byZip = new Map();
   const counts = teams.map(() => 0);
-  const features = data.zips.map(([zip, lat, lon, idxs]) => {
-    byZip.set(zip, { lat, lon, idxs });
+  const features = data.zips.map(([zip, lat, lon, idxs, place, pop]) => {
+    byZip.set(zip, { lat, lon, idxs, place, pop });
     if (idxs) idxs.forEach((i) => counts[i]++);
     const abbrs = idxs ? idxs.map((i) => teams[i].abbr) : [];
     return {
@@ -129,10 +130,13 @@
   const popup = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" });
   function describe(zip) {
     const z = byZip.get(zip);
-    if (!z.idxs) return `<b>ZIP ${zip}</b><br>No data from NBA.com for this ZIP.`;
-    if (!z.idxs.length) return `<b>ZIP ${zip}</b><br>No local blackouts. Every team is available on League Pass.`;
+    let head = `<b>ZIP ${zip}</b>`;
+    if (z.place) head += `<br>${z.place}`;
+    if (z.pop != null) head += `<br><span class="pop">Population ${z.pop.toLocaleString()}</span>`;
+    if (!z.idxs) return `${head}<p>No data from NBA.com for this ZIP.</p>`;
+    if (!z.idxs.length) return `${head}<p>No local blackouts. Every team is available on League Pass.</p>`;
     const items = z.idxs.map((i) => `<li>${teams[i].city} ${teams[i].name}</li>`).join("");
-    return `<b>ZIP ${zip}</b><br>Blacked out on League Pass:<ul>${items}</ul>`;
+    return `${head}<p>Blacked out on League Pass:</p><ul>${items}</ul>`;
   }
   function showZip(zip) {
     const z = byZip.get(zip);

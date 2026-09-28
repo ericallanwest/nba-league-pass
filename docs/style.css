@@ -104,7 +104,9 @@ button:hover { background: var(--hover); }
 }
 .maplibregl-popup-content { font: 13px/1.4 system-ui, sans-serif; color: #1c1c1c; }
 .maplibregl-popup-content b { font-size: 14px; }
-.maplibregl-popup-content ul { margin: 4px 0 0; padding-left: 16px; }
+.maplibregl-popup-content p { margin: 6px 0 0; }
+.maplibregl-popup-content ul { margin: 2px 0 0; padding-left: 16px; }
+.maplibregl-popup-content .pop { color: #5f5f5a; }
 
 @media (max-width: 720px) {
   body { flex-direction: column; }
