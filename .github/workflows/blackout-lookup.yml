@@ -1,0 +1,79 @@
+name: Blackout lookup
+
+# Looks up NBA League Pass blackout teams for every ZCTA in data/all_zctas.txt,
+# committing data/nba_blackouts.csv (and the site JSON) after each chunk so
+# progress survives a cancelled or timed-out run. Re-run to resume.
+on:
+  workflow_dispatch:
+    inputs:
+      chunk:
+        description: ZIPs per commit
+        default: "2500"
+      delay:
+        description: Seconds between requests
+        default: "0.5"
+  push:
+    paths:
+      - .github/workflows/blackout-lookup.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: blackout-lookup-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      CHUNK: ${{ inputs.chunk || '2500' }}
+      DELAY: ${{ inputs.delay || '0.5' }}
+      # stop starting new chunks after this many seconds, leaving time to commit
+      BUDGET: "19800"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install requests
+
+      - name: Check NBA.com is reachable from the runner
+        run: |
+          code=$(curl -s -o resp.json -w '%{http_code}' -A 'Mozilla/5.0 (blackout-lookup script)' \
+            'https://content-api-prod.nba.com/public/1/leagues/nba/blackouts?zip=90210')
+          cat resp.json; echo
+          [ "$code" = 200 ] || { echo "::error::NBA.com returned HTTP $code to the runner"; exit 1; }
+
+      - name: Look up ZIPs in chunks, committing after each
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
+
+          remaining() {
+            python -c "
+          import csv, sys
+          sys.path.insert(0, 'scripts')
+          from nba_blackouts import load_zips, already_done
+          print(len(set(load_zips('data/all_zctas.txt')) - already_done('data/nba_blackouts.csv')))"
+          }
+
+          start=$SECONDS
+          before=$(remaining)
+          while [ "$before" -gt 0 ] && [ $((SECONDS - start)) -lt "$BUDGET" ]; do
+            echo "::group::$before ZIPs remaining"
+            python scripts/nba_blackouts.py data/all_zctas.txt -o data/nba_blackouts.csv -d "$DELAY" --limit "$CHUNK"
+            python scripts/build_site_data.py
+            after=$(remaining)
+            git add data/nba_blackouts.csv docs/data/blackouts.json
+            git commit -m "Blackout lookup: $after of $(wc -l < data/all_zctas.txt) ZIPs remaining" || true
+            git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME"
+            echo "::endgroup::"
+            # a chunk that finished nothing new means every remaining ZIP is failing; stop and let a later run retry
+            [ "$after" -lt "$before" ] || { echo "::warning::No progress in last chunk; $after ZIPs still failing"; break; }
+            before=$after
+          done
+          echo "Done: $(remaining) ZIPs remaining" >> "$GITHUB_STEP_SUMMARY"

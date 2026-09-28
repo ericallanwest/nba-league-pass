@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NBA League Pass Blackout Map</title>
+  <meta name="description" content="Which NBA teams are locally blacked out on NBA League Pass in every US ZIP code. Filter by team or search a ZIP.">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside id="panel">
+    <header>
+      <h1>NBA League Pass Blackout Map</h1>
+      <p class="sub">Where each team's games are blacked out on League Pass because a local broadcaster holds the rights.</p>
+    </header>
+
+    <form id="search" autocomplete="off">
+      <label for="zip">Find a ZIP code</label>
+      <div class="row">
+        <input id="zip" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="e.g. 02139">
+        <button type="submit">Go</button>
+      </div>
+      <p id="search-result" aria-live="polite"></p>
+    </form>
+
+    <section>
+      <div class="section-head">
+        <h2>Teams</h2>
+        <div class="bulk">
+          <button type="button" id="all">All</button>
+          <button type="button" id="none">None</button>
+        </div>
+      </div>
+      <p id="summary" aria-live="polite"></p>
+      <ul id="teams"></ul>
+      <label class="toggle"><input type="checkbox" id="show-other" checked> Show ZIPs without a selected team's blackout</label>
+    </section>
+
+    <details id="notes">
+      <summary>Notes &amp; sources</summary>
+      <ul>
+        <li>Blackout teams come from NBA.com's League Pass ZIP lookup (the form on <a href="https://www.nba.com/league-pass-purchase">nba.com/league-pass-purchase</a>), queried for every ZIP. Check NBA.com for the authoritative answer for your address.</li>
+        <li>Points are the Census Bureau's 2025 ZIP Code Tabulation Areas (TIGER/Line), plotted at each area's internal point. ZCTAs approximate USPS ZIP codes, and PO-box-only ZIPs aren't included.</li>
+        <li>A ZIP ringed in black is blacked out for two or more of the selected teams.</li>
+        <li>Puerto Rico and a few other ZIPs aren't recognized by NBA.com, so they show as no data.</li>
+        <li>Nationally televised games have their own blackouts, which this map doesn't cover.</li>
+        <li>Data last built <span id="updated">—</span>. Code and data: <a href="https://github.com/ericallanwest/nba-league-pass">github.com/ericallanwest/nba-league-pass</a>.</li>
+      </ul>
+    </details>
+  </aside>
+
+  <main id="map" aria-label="Map of blacked-out ZIP codes"></main>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
