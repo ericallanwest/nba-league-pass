@@ -99,6 +99,7 @@ section > h2:first-child { margin-top: 0; }
   width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent);
 }
 .range input::-moz-range-track { background: none; }
+.range.disabled { opacity: .4; }
 .range-label { margin: 2px 0 0; font-variant-numeric: tabular-nums; }
 
 #team-section.disabled #teams, #team-section.disabled .bulk { opacity: .4; pointer-events: none; }

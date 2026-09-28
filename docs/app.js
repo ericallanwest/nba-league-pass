@@ -57,6 +57,12 @@
     const hi = popParam[2] === "" ? TOP : POP_STOPS.indexOf(+popParam[2]);
     if (lo >= 0 && hi > lo) { popLo.value = lo; popHi.value = hi; }
   }
+  // older data files have no population; the range filter can't apply then
+  if (!data.population_source) {
+    popLo.value = 0; popHi.value = TOP;
+    popLo.disabled = popHi.disabled = true;
+    document.querySelector(".range").classList.add("disabled");
+  }
   const popRange = () => [POP_STOPS[+popLo.value], +popHi.value === TOP ? Infinity : POP_STOPS[+popHi.value]];
   const popFull = () => +popLo.value === 0 && +popHi.value === TOP;
 
@@ -166,7 +172,8 @@
 
     const [lo, hi] = popRange();
     const fmt = (v) => v.toLocaleString();
-    document.getElementById("pop-label").textContent = popFull() ? "Any population"
+    document.getElementById("pop-label").textContent = !data.population_source ? "Population data isn't loaded yet"
+      : popFull() ? "Any population"
       : hi === Infinity ? `${fmt(lo)}+ people` : `${fmt(lo)} – ${fmt(hi)} people`;
     const fill = document.querySelector(".range-fill");
     fill.style.left = `${(popLo.value / TOP) * 100}%`;

@@ -16,6 +16,8 @@ on:
   schedule:
     - cron: "17 7 * * *"   # daily, after ORS's quota resets
   push:
+    # main only: a push to a PR branch must not start a second data run
+    branches: [main]
     paths:
       - .github/workflows/drive-times.yml
       - scripts/drive_times.py
