@@ -17,6 +17,31 @@
   document.getElementById("updated").textContent = data.updated;
   if (data.population_source) document.getElementById("pop-source").textContent = ` (${data.population_source})`;
 
+  // A ZIP blacked out for several teams is drawn as a pie with one equal slice per team, turned so
+  // each slice faces its team's arena. Slices keep the arenas' order around the ZIP; the pie's
+  // rotation is the circular mean of how far each slice would have to turn to face its arena.
+  // Bearings are on the Web Mercator map, so they match what's on screen. Returns the slice order
+  // (pk, clockwise from the top of the unrotated image) and the rotation in degrees (r).
+  function pie(lat, lon, idxs) {
+    const merc = (la) => Math.log(Math.tan(Math.PI / 4 + (la * Math.PI) / 360));
+    const y0 = merc(lat);
+    const byBearing = idxs.map((i) => {
+      const t = teams[i];
+      const b = (Math.atan2(((t.lon - lon) * Math.PI) / 180, merc(t.lat) - y0) * 180) / Math.PI;
+      return { abbr: t.abbr, b: (b + 360) % 360 };
+    }).sort((a, b) => a.b - b.b);
+    // start the order at the alphabetically first team, so a set of teams needs few distinct images
+    const first = byBearing.reduce((m, x, k) => (x.abbr < byBearing[m].abbr ? k : m), 0);
+    const order = [...byBearing.slice(first), ...byBearing.slice(0, first)];
+    const w = 360 / order.length;
+    let sx = 0, sy = 0;
+    order.forEach((x, k) => {
+      const a = ((x.b - k * w) * Math.PI) / 180;
+      sx += Math.sin(a); sy += Math.cos(a);
+    });
+    return { pk: order.map((x) => x.abbr).join(","), r: Math.round((Math.atan2(sx, sy) * 180) / Math.PI) };
+  }
+
   // ZIP lookup + per-team counts. t is "|BOS|NYK|" so map filters can match with a substring test.
   const byZip = new Map();
   const counts = teams.map(() => 0);
@@ -24,11 +49,9 @@
     byZip.set(zip, { lat, lon, idxs, place, pop, drives });
     if (idxs) idxs.forEach((i) => counts[i]++);
     const abbrs = idxs ? idxs.map((i) => teams[i].abbr) : [];
-    return {
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [lon, lat] },
-      properties: { z: zip, t: `|${abbrs.join("|")}|`, nd: idxs === null, n: idxs ? idxs.length : -1, p: pop ?? -1 },
-    };
+    const props = { z: zip, t: `|${abbrs.join("|")}|`, nd: idxs === null, n: idxs ? idxs.length : -1, p: pop ?? -1 };
+    if (idxs && idxs.length >= 2) Object.assign(props, pie(lat, lon, idxs));
+    return { type: "Feature", geometry: { type: "Point", coordinates: [lon, lat] }, properties: props };
   });
   const looked = data.zips.filter((z) => z[3] !== null).length;
 
@@ -143,7 +166,8 @@
     const teamColor = sel.length ? ["case", ...sel.flatMap((t) => [has(t.abbr), t.color]), "#888"] : "#888";
     // like the Tableau viz, only single-team ZIPs take a team color; a ZIP blacked out for two or
     // more teams is gray (outlined) even when one of them is selected
-    const color = mode === "none" ? NONE_COLOR : ["case", [">=", ["get", "n"], 2], GRAY, teamColor];
+    // pies cover 2+ team ZIPs; their circle underneath only draws the outline
+    const color = mode === "none" ? NONE_COLOR : ["case", [">=", ["get", "n"], 2], "rgba(0,0,0,0)", teamColor];
     return { hit, other: ["all", ["!", hit], popCond], color };
   }
 
@@ -193,6 +217,11 @@
       map.setPaintProperty("zips-hit", "circle-stroke-width", mode === "none" ? 0 : ["interpolate", ["linear"], ["zoom"],
         3, 0.25, 7, 0.9]);
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
+      // image ids carry the selection, since unselected teams' slices are gray
+      const selKey = selected.size === teams.length ? "*" : [...selected].sort().join(",");
+      map.setFilter("zips-pie", mode === "none" ? false : ["all", hit, [">=", ["get", "n"], 2]]);
+      map.setLayoutProperty("zips-pie", "icon-image", ["concat", "pie|", ["get", "pk"], "|", selKey]);
+      map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
       map.setFilter("zips-other", other);
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
       map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
@@ -377,6 +406,26 @@
     return { type: "Feature", properties: { abbr: t.abbr, color: t.color }, geometry: { type: "LineString", coordinates: coords } };
   }
 
+  // pie image, PIE_R px in radius: slice k is centered k slices clockwise from the top
+  const PIE_R = 24;
+  function pieImage(colors) {
+    const size = PIE_R * 4; // drawn at 2x for sharp edges
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const ctx = c.getContext("2d");
+    const w = (2 * Math.PI) / colors.length;
+    colors.forEach((color, k) => {
+      const mid = k * w - Math.PI / 2; // canvas angles start at 3 o'clock
+      ctx.beginPath();
+      ctx.moveTo(size / 2, size / 2);
+      ctx.arc(size / 2, size / 2, size / 2, mid - w / 2, mid + w / 2);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+    return ctx.getImageData(0, 0, size, size);
+  }
+
   // ---- layers ----
   mapLoaded.then(() => {
     map.addSource("zips", { type: "geojson", data: { type: "FeatureCollection", features } });
@@ -403,6 +452,25 @@
         "circle-radius": radius(1),
         "circle-opacity": 0.85,
       },
+    });
+    map.addLayer({
+      id: "zips-pie",
+      type: "symbol",
+      source: "zips",
+      layout: {
+        "icon-rotate": ["get", "r"],
+        "icon-rotation-alignment": "map", // stays aimed at the arenas if the map is rotated
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+      },
+      paint: { "icon-opacity": 0.85 },
+    });
+    map.on("styleimagemissing", (e) => {
+      const [kind, pk, selKey] = e.id.split("|");
+      if (kind !== "pie" || map.hasImage(e.id)) return;
+      const sel = selKey === "*" ? null : new Set(selKey.split(","));
+      const colors = pk.split(",").map((a) => (!sel || sel.has(a) ? teams.find((t) => t.abbr === a).color : GRAY));
+      map.addImage(e.id, pieImage(colors), { pixelRatio: 2 });
     });
     map.addSource("rings", { type: "geojson", data: { type: "FeatureCollection", features: teams.map((t) => ring(t)) } });
     map.addLayer({
