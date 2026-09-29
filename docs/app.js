@@ -29,7 +29,15 @@
   // rotation is the circular mean of how far each slice would have to turn to face its arena.
   // Bearings are on the Web Mercator map, so they match what's on screen. Returns the slice order
   // (pk, clockwise from the top of the unrotated image) and the rotation in degrees (r).
+  // arena pairs so close that bearings to them swing wildly between neighboring ZIPs: split these
+  // two-team pies straight north/south instead, with the northern arena's team on top
+  const NORTH_SOUTH = { "BKN,NYK": "NYK", "LAC,LAL": "LAL" };
   function pie(lat, lon, idxs) {
+    const key = idxs.map((i) => teams[i].abbr).sort().join(",");
+    if (NORTH_SOUTH[key]) {
+      // slice 0 (the first team in pk) sits at the top before rotation; turning 180° puts it at the bottom
+      return { pk: key, r: key.startsWith(NORTH_SOUTH[key]) ? 0 : 180 };
+    }
     const merc = (la) => Math.log(Math.tan(Math.PI / 4 + (la * Math.PI) / 360));
     const y0 = merc(lat);
     const byBearing = idxs.map((i) => {
