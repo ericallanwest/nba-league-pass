@@ -59,10 +59,13 @@
 
   // ZIP lookup + per-team counts. t is "|BOS|NYK|" so map filters can match with a substring test.
   const byZip = new Map();
+  // 18.6M, 850K
+  const compact = (n) => (n >= 999500 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : `${n}`);
   const counts = teams.map(() => 0);
+  const teamPeople = teams.map(() => 0); // blacked-out population per team, whatever the filters
   const features = data.zips.map(([zip, lat, lon, idxs, place, pop, drives]) => {
     byZip.set(zip, { lat, lon, idxs, place, pop, drives });
-    if (idxs) idxs.forEach((i) => counts[i]++);
+    if (idxs) idxs.forEach((i) => { counts[i]++; teamPeople[i] += pop || 0; });
     const abbrs = idxs ? idxs.map((i) => teams[i].abbr) : [];
     const props = { z: zip, t: `|${abbrs.join("|")}|`, nd: idxs === null, n: idxs ? idxs.length : -1, p: pop ?? -1 };
     if (idxs && idxs.length >= 2) Object.assign(props, pie(lat, lon, idxs));
@@ -135,7 +138,7 @@
         <span class="swatch" style="background:${t.color}"></span>
         <span class="name">${t.city} ${t.name}</span>
       </label>
-      <span class="count" title="ZIP codes blacked out">${counts[i].toLocaleString()}</span>
+      <span class="count" title="${teamPeople[i].toLocaleString()} people in ${counts[i].toLocaleString()} ZIP codes blacked out">${compact(teamPeople[i])}</span>
       <button type="button" class="only" title="Show only this team">only</button>`;
     li.querySelector("input").addEventListener("change", (e) => {
       e.target.checked ? selected.add(t.abbr) : selected.delete(t.abbr);
@@ -391,9 +394,7 @@
     const note = (names ? `<div>${names}</div>` : "") +
       `<div class="label">${(EXTRA_KIND[kind] || (() => "USPS ZIP with no Census area of its own"))(po)}, ` +
       `within ZIP ${parentZip}'s area (shown at its point).</div>`;
-    result.textContent = idxs === undefined ? `${zip}: blackouts not looked up yet.`
-      : !idxs ? `${zip} isn't recognized by NBA.com.`
-      : idxs.length ? `Blacked out: ${idxs.map((i) => teams[i].name).join(", ")}` : "No local blackouts.";
+    result.textContent = ""; // the popup has the details
     map.flyTo({ center: [z.lon, z.lat], zoom: 9 });
     popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip, z, note)).addTo(map);
     writeHash(zip);
@@ -428,9 +429,7 @@
       }
       return;
     }
-    result.textContent = !z.idxs ? "No data for this ZIP."
-      : z.idxs.length ? `Blacked out: ${z.idxs.map((i) => teams[i].name).join(", ")}`
-      : "No local blackouts.";
+    result.textContent = ""; // the popup has the details
     if (fly) map.flyTo({ center: [z.lon, z.lat], zoom: 9 });
     showZip(zip);
     writeHash(zip);
