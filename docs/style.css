@@ -49,6 +49,7 @@ body {
 #map { flex: 1; height: 100%; }
 
 h1 { font-size: 18px; margin: 0 0 16px; }
+.page-link { margin: -10px 0 16px; font-size: 13px; }
 h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0; color: var(--muted); }
 a { color: var(--accent); }
 

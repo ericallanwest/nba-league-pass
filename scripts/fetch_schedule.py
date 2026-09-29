@@ -25,6 +25,7 @@ URLS = ["https://nba-prod-us-east-1-mediaops-stats.s3.amazonaws.com/NBA/staticDa
         "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json"]
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "schedule.csv"
+SITE = ROOT / "docs" / "data" / "schedule.json"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/126.0 Safari/537.36",
@@ -73,7 +74,8 @@ def main():
     sched = r.json()["leagueSchedule"]
     print("season", sched.get("seasonYear"), "league", sched.get("leagueId"))
 
-    teams = [row["abbr"] for row in csv.DictReader(open(ROOT / "data" / "teams.csv"))]
+    team_rows = list(csv.DictReader(open(ROOT / "data" / "teams.csv")))
+    teams = [row["abbr"] for row in team_rows]
     rows, raw_national, sample = [], Counter(), None
     for day in sched["gameDates"]:
         for g in day["games"]:
@@ -108,6 +110,14 @@ def main():
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows(rows)
+
+    # Compact copy for the site's schedule page: [id, date, time, away, home, [national], label]
+    SITE.write_text(json.dumps({
+        "season": sched.get("seasonYear"),
+        "teams": {t["abbr"]: {"city": t["city"], "name": t["name"], "color": t["color"]} for t in team_rows},
+        "games": [[r["game_id"], r["date"], r["time"], r["away"], r["home"],
+                   [n for n in r["national"].split(";") if n], r["label"]] for r in rows],
+    }, separators=(",", ":")) + "\n")
 
     # Log the structure and counts so the run output can be checked.
     if sample:
