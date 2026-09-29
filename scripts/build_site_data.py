@@ -19,7 +19,8 @@ with no data (not yet looked up, or unknown to NBA.com).
 ZIPs in Alaska, Puerto Rico and the other territories are left off the map (no
 ZIP there is blacked out: NBA.com reports no local teams for Alaska and doesn't
 recognize the rest); "hidden" maps each such ZIP to its state so a ZIP search
-can explain why it isn't shown.
+can explain why it isn't shown. "po_only" lists PO-box-only ZIPs (USPS type
+PO BOX) with no residents, so the popup can say why the population is 0.
 
 USPS ZIPs that aren't Census ZCTAs (data/extra_zip_*.csv, see
 scripts/extra_zip_details.py): delivery-area ZIPs newer than the ZCTAs are
@@ -77,6 +78,8 @@ def main():
     pop_rows = read_csv("zcta_population.csv", optional=True)
     # the Census API uses negative sentinel values for "no estimate"
     population = {r["zip"]: int(r["population"]) for r in pop_rows if r["population"].lstrip("-").isdigit() and int(r["population"]) >= 0}
+    # PO-box-only ZIPs with no residents: their Census area is little more than the post office
+    po_only = sorted(r["zip"] for r in place_rows if r.get("usps_type") == "PO BOX" and population.get(r["zip"]) == 0)
 
     drives = {}
     for r in read_csv("drive_times.csv", optional=True):
@@ -126,6 +129,7 @@ def main():
         "population_source": f"ACS {pop_rows[0]['acs_year']} 5-year" if pop_rows else None,
         "zips": zips,
         "hidden": hidden,
+        "po_only": po_only,
         "post_census": {z: details[z]["names"] for z in sorted(areas)},
         "lookup_remaining": sum(z[0] not in finished for z in zips),
     }

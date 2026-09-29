@@ -69,6 +69,7 @@
     return { type: "Feature", geometry: { type: "Point", coordinates: [lon, lat] }, properties: props };
   });
   const looked = data.zips.filter((z) => z[3] !== null).length;
+  const poOnly = new Set(data.po_only || []);
 
   // ---- state (mirrored to the URL hash so views can be shared) ----
   const params = new URLSearchParams(location.hash.slice(1));
@@ -345,7 +346,8 @@
         .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} Miles`));
     }
     return `<div class="title">${title}</div>` + note +
-      (z.noPop ? "" : row("ZIP Population", z.pop != null ? z.pop.toLocaleString() : "—")) +
+      (z.noPop ? "" : row("ZIP Population", z.pop == null ? "—"
+        : z.pop === 0 && poOnly.has(zip) ? "0 (PO Boxes Only)" : z.pop.toLocaleString())) +
       row("Blackout Team(s)", blackout) +
       `<div class="title closest">${heading}</div>${closest.join("")}`;
   }
