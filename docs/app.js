@@ -122,6 +122,7 @@
 
   // ---- map styling from the filters ----
   const NONE_COLOR = "#2a9d8f";
+  const OUTLINE = dark ? "#9a9a94" : "#5f5f58"; // darker dot outline (colored dots; gray dots with 2+ teams)
   const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
   const COUNT_EXPR = {
     any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
@@ -183,7 +184,12 @@
       const { hit, other, color, matches } = expressions();
       map.setFilter("zips-hit", hit);
       map.setPaintProperty("zips-hit", "circle-color", color);
-      map.setPaintProperty("zips-hit", "circle-stroke-width", mode === "none" ? 0 : ["case", [">", matches, 1], 1.2, 0]);
+      // every colored dot gets the darker outline; a heavier black ring marks 2+ selected teams
+      const multi = mode === "none" ? false : [">", matches, 1];
+      map.setPaintProperty("zips-hit", "circle-stroke-color", ["case", multi, dark ? "#fff" : "#000", OUTLINE]);
+      // "None" shows ZIPs with no blackout, which get no outline
+      map.setPaintProperty("zips-hit", "circle-stroke-width", mode === "none" ? 0 : ["interpolate", ["linear"], ["zoom"],
+        3, ["case", multi, 0.8, 0.25], 7, ["case", multi, 1.6, 0.9]]);
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
       map.setFilter("zips-other", other);
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
@@ -194,8 +200,10 @@
     for (const [abbr, el] of markers) el.style.opacity = mode === "none" || selected.has(abbr) ? 1 : 0.35;
 
     const { n, people } = matching();
-    const coverage = looked < data.zips.length
-      ? ` Lookup in progress: ${looked.toLocaleString()} of ${data.zips.length.toLocaleString()} ZIPs checked so far.`
+    // older data files lack lookup_remaining; fall back to counting ZIPs without data
+    const remaining = data.lookup_remaining ?? data.zips.length - looked;
+    const coverage = remaining > 0
+      ? ` Lookup in progress: ${(data.zips.length - remaining).toLocaleString()} of ${data.zips.length.toLocaleString()} ZIPs checked so far.`
       : "";
     const all = selected.size === teams.length, k = selected.size;
     const single = k === 1 ? `the ${teams.find((t) => selected.has(t.abbr)).name}` : null;
@@ -291,7 +299,10 @@
   function search(zip, fly = true) {
     const z = byZip.get(zip);
     if (!z) {
-      result.textContent = `${zip} isn't in the Census ZIP areas (it may be a PO-box-only ZIP).`;
+      const st = data.hidden && data.hidden[zip];
+      result.textContent = st
+        ? `${STATES[st] || st} isn't shown on the map: none of its ZIPs has a local blackout (see Notes).`
+        : `${zip} isn't in the Census ZIP areas (it may be a PO-box-only ZIP).`;
       return;
     }
     result.textContent = !z.idxs ? "No data for this ZIP."
@@ -331,8 +342,13 @@
       source: "zips",
       paint: {
         "circle-radius": radius(0.8),
-        "circle-color": ["case", ["get", "nd"], dark ? "#3a3a3a" : "#e2e2dc", dark ? "#5a5a55" : "#c4c4bc"],
-        "circle-opacity": 0.8,
+        // gray for ZIPs outside the filter; a darker outline marks ones blacked out for 2+ teams
+        "circle-color": dark ? "#4a4a46" : "#d2d2cc",
+        "circle-stroke-color": OUTLINE,
+        // thin when zoomed out, where thousands of outlined dots would turn the map dark
+        "circle-stroke-width": ["interpolate", ["linear"], ["zoom"],
+          3, ["case", [">=", ["get", "n"], 2], 0.25, 0], 7, ["case", [">=", ["get", "n"], 2], 0.9, 0]],
+        "circle-opacity": 0.85,
       },
     });
     map.addLayer({
@@ -342,7 +358,6 @@
       paint: {
         "circle-radius": radius(1),
         "circle-opacity": 0.85,
-        "circle-stroke-color": dark ? "#fff" : "#000",
       },
     });
     map.addSource("rings", { type: "geojson", data: { type: "FeatureCollection", features: teams.map((t) => ring(t)) } });
@@ -350,7 +365,8 @@
       id: "rings",
       type: "line",
       source: "rings",
-      paint: { "line-color": ["get", "color"], "line-width": 1.8, "line-opacity": 0.9 },
+      // neutral like the Tableau viz; a team-colored ring disappears into that team's dots
+      paint: { "line-color": dark ? "#f0f0ec" : "#1c1c1c", "line-width": 1.6, "line-opacity": 0.9 },
     });
     for (const layer of ["zips-hit", "zips-other"]) {
       map.on("click", layer, (e) => showZip(e.features[0].properties.z));
