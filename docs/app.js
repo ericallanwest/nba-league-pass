@@ -71,7 +71,7 @@
   const TOP = POP_STOPS.length;
   let mode = ["any", "one", "multiple", "none"].includes(params.get("blackouts")) ? params.get("blackouts") : "any";
   document.querySelector(`#count input[value="${mode}"]`).checked = true;
-  if (params.get("other") === "0") showOther.checked = false;
+  if (params.get("other") === "1") showOther.checked = true;
   if (params.get("rings") === "0") rings.checked = false;
   if (params.get("size") === "0") sizePop.checked = false;
   const popParam = (params.get("pop") || "").match(/^(\d+)-(\d*)$/);
@@ -99,7 +99,7 @@
     }
     if (!rings.checked) p.set("rings", "0");
     if (!sizePop.checked) p.set("size", "0");
-    if (!showOther.checked) p.set("other", "0");
+    if (showOther.checked) p.set("other", "1");
     if (zip) p.set("zip", zip);
     const h = p.toString().replace(/%2C/g, ",");
     history.replaceState(null, "", h ? `#${h}` : location.pathname + location.search);
@@ -146,7 +146,7 @@
   // ---- map styling from the filters ----
   const NONE_COLOR = "#2a9d8f";
   const GRAY = dark ? "#4a4a46" : "#d2d2cc";
-  const OUTLINE = dark ? "#9a9a94" : "#5f5f58"; // darker dot outline (colored dots; gray dots with 2+ teams)
+  const OUTLINE = dark ? "#9a9a94" : "#5f5f58"; // darker outline on blacked-out dots
   const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
   const COUNT_EXPR = {
     any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
@@ -217,10 +217,7 @@
       map.setPaintProperty("zips-hit", "circle-stroke-width", mode === "none" ? 0 : ["interpolate", ["linear"], ["zoom"],
         3, 0.25, 7, 0.9]);
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
-      // image ids carry the selection, since unselected teams' slices are gray
-      const selKey = selected.size === teams.length ? "*" : [...selected].sort().join(",");
       map.setFilter("zips-pie", mode === "none" ? false : ["all", hit, [">=", ["get", "n"], 2]]);
-      map.setLayoutProperty("zips-pie", "icon-image", ["concat", "pie|", ["get", "pk"], "|", selKey]);
       map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
       map.setFilter("zips-other", other);
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
@@ -435,12 +432,8 @@
       source: "zips",
       paint: {
         "circle-radius": radius(0.8),
-        // gray for ZIPs outside the filter; a darker outline marks ones blacked out for 2+ teams
+        // ZIPs outside the filter: plain gray, no outline
         "circle-color": GRAY,
-        "circle-stroke-color": OUTLINE,
-        // thin when zoomed out, where thousands of outlined dots would turn the map dark
-        "circle-stroke-width": ["interpolate", ["linear"], ["zoom"],
-          3, ["case", [">=", ["get", "n"], 2], 0.25, 0], 7, ["case", [">=", ["get", "n"], 2], 0.9, 0]],
         "circle-opacity": 0.85,
       },
     });
@@ -458,6 +451,7 @@
       type: "symbol",
       source: "zips",
       layout: {
+        "icon-image": ["concat", "pie|", ["get", "pk"]],
         "icon-rotate": ["get", "r"],
         "icon-rotation-alignment": "map", // stays aimed at the arenas if the map is rotated
         "icon-allow-overlap": true,
@@ -466,10 +460,9 @@
       paint: { "icon-opacity": 0.85 },
     });
     map.on("styleimagemissing", (e) => {
-      const [kind, pk, selKey] = e.id.split("|");
+      const [kind, pk] = e.id.split("|");
       if (kind !== "pie" || map.hasImage(e.id)) return;
-      const sel = selKey === "*" ? null : new Set(selKey.split(","));
-      const colors = pk.split(",").map((a) => (!sel || sel.has(a) ? teams.find((t) => t.abbr === a).color : GRAY));
+      const colors = pk.split(",").map((a) => teams.find((t) => t.abbr === a).color);
       map.addImage(e.id, pieImage(colors), { pixelRatio: 2 });
     });
     map.addSource("rings", { type: "geojson", data: { type: "FeatureCollection", features: teams.map((t) => ring(t)) } });
