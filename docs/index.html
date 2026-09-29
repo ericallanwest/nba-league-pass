@@ -29,6 +29,14 @@
     </form>
 
     <section>
+      <h2>ZIP population</h2>
+      <div class="range">
+        <div class="range-track"><div class="range-fill"></div></div>
+        <input type="range" id="pop-lo" min="0" max="11" step="1" value="3" aria-label="Minimum population">
+        <input type="range" id="pop-hi" min="0" max="11" step="1" value="11" aria-label="Maximum population">
+      </div>
+      <p id="pop-label" class="range-label"></p>
+
       <h2>Blacked-out teams per ZIP</h2>
       <div id="count" class="segmented" role="radiogroup" aria-label="Number of teams blacked out">
         <label><input type="radio" name="count" value="any" checked><span>All</span></label>
@@ -36,14 +44,6 @@
         <label><input type="radio" name="count" value="multiple"><span>Multiple</span></label>
         <label><input type="radio" name="count" value="none"><span>None</span></label>
       </div>
-
-      <h2>ZIP population</h2>
-      <div class="range">
-        <div class="range-track"><div class="range-fill"></div></div>
-        <input type="range" id="pop-lo" min="0" max="11" step="1" value="0" aria-label="Minimum population">
-        <input type="range" id="pop-hi" min="0" max="11" step="1" value="11" aria-label="Maximum population">
-      </div>
-      <p id="pop-label" class="range-label"></p>
 
       <p id="summary" aria-live="polite"></p>
     </section>
@@ -91,6 +91,7 @@
       <ul>
         <li>Blackout teams come from NBA.com's League Pass ZIP lookup (the form on <a href="https://www.nba.com/league-pass-purchase">nba.com/league-pass-purchase</a>), queried for every ZIP. Check NBA.com for the authoritative answer for your address.</li>
         <li>Points are the Census Bureau's 2025 ZIP Code Tabulation Areas (TIGER/Line), plotted at each area's internal point. ZCTAs approximate USPS ZIP codes, and PO-box-only ZIPs aren't included.</li>
+        <li>State lines are the Census Bureau's 2025 cartographic state boundaries (1:500,000, clipped to the shoreline), simplified for the web.</li>
         <li>Town and state are the USPS city name for each ZIP (via the <a href="https://pypi.org/project/zipcodes/">zipcodes</a> package). Population is from the Census Bureau's American Community Survey<span id="pop-source"></span>.</li>
         <li>Closest teams are ranked by typical drive time without traffic, from <a href="https://openrouteservice.org">openrouteservice</a> (© OpenStreetMap contributors), from each ZIP's center point to the arena. Miles are driving distance by the same route. Until a ZIP's drive times are computed, and for ZIPs with no road route to an arena (Hawaii), the list shows the nearest arenas in a straight line, labeled as such.</li>
         <li>A team color marks a ZIP blacked out for that team alone. A ZIP blacked out for two or more teams (including a selected one) is a pie with an equal slice for each of them, turned so each team's slice faces its arena, in every team's color whether or not it's selected. <em>One</em> and <em>Multiple</em> count all of a ZIP's blacked-out teams, not just the selected ones; <em>None</em> shows ZIPs with no local blackout.</li>

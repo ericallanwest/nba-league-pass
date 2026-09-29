@@ -69,6 +69,7 @@
     return { type: "Feature", geometry: { type: "Point", coordinates: [lon, lat] }, properties: props };
   });
   const looked = data.zips.filter((z) => z[3] !== null).length;
+  const poOnly = new Set(data.po_only || []);
 
   // ---- state (mirrored to the URL hash so views can be shared) ----
   const params = new URLSearchParams(location.hash.slice(1));
@@ -84,6 +85,7 @@
   // population slider stops; the last position means "no upper limit"
   const POP_STOPS = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
   const TOP = POP_STOPS.length;
+  const DEFAULT_LO = POP_STOPS.indexOf(500); // default view leaves out the smallest ZIPs so the map isn't so busy
   let mode = ["any", "one", "multiple", "none"].includes(params.get("blackouts")) ? params.get("blackouts") : "any";
   document.querySelector(`#count input[value="${mode}"]`).checked = true;
   if (params.get("other") === "1") showOther.checked = true;
@@ -103,12 +105,13 @@
   }
   const popRange = () => [POP_STOPS[+popLo.value], +popHi.value === TOP ? Infinity : POP_STOPS[+popHi.value]];
   const popFull = () => +popLo.value === 0 && +popHi.value === TOP;
+  const popDefault = () => +popLo.value === DEFAULT_LO && +popHi.value === TOP;
 
   function writeHash(zip) {
     const p = new URLSearchParams();
     if (selected.size !== teams.length) p.set("teams", [...selected].join(","));
     if (mode !== "any") p.set("blackouts", mode);
-    if (!popFull()) {
+    if (!popDefault()) {
       const [lo, hi] = popRange();
       p.set("pop", `${lo}-${hi === Infinity ? "" : hi}`);
     }
@@ -159,10 +162,12 @@
   }
 
   // arena marker clicks: from the all-teams view, show just that team; after that each click
-  // adds or removes one team, so several can be picked (or dropped) on the map
+  // adds or removes one team, so several can be picked (or dropped) on the map. Removing the
+  // last one goes back to all teams rather than an empty map.
   function toggleTeam(abbr) {
     if (selected.size === teams.length) return solo(abbr);
     selected.has(abbr) ? selected.delete(abbr) : selected.add(abbr);
+    if (!selected.size) selected = new Set(teams.map((t) => t.abbr));
     update();
   }
 
@@ -171,6 +176,7 @@
   const GRAY = () => (dark ? "#4a4a46" : "#d2d2cc");
   const OUTLINE = () => (dark ? "#9a9a94" : "#5f5f58"); // darker outline on blacked-out dots
   const RING = () => (dark ? "#f0f0ec" : "#1c1c1c");
+  const STATE_LINE = () => (dark ? "#8a8a85" : "#8f8f88"); // stronger than the basemap's faint borders
   const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
   const COUNT_EXPR = {
     any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
@@ -240,9 +246,15 @@
       map.setPaintProperty("zips-hit", "circle-stroke-width", ["interpolate", ["linear"], ["zoom"], 3, 0.25, 7, 0.9]);
       map.setPaintProperty("zips-other", "circle-color", GRAY());
       map.setPaintProperty("rings", "line-color", RING());
+      map.setPaintProperty("states", "line-color", STATE_LINE());
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
       map.setFilter("zips-pie", mode === "none" ? false : ["all", hit, [">=", ["get", "n"], 2]]);
       map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
+      map.setFilter("zips-searched", ["==", ["get", "z"], highlighted]);
+      // a filtered-out ZIP gets a gray dot; one already shown just gets the ring
+      map.setPaintProperty("zips-searched", "circle-color", ["case", hit, "rgba(0,0,0,0)", GRAY()]);
+      map.setPaintProperty("zips-searched", "circle-radius", radius(1));
+      map.setPaintProperty("zips-searched", "circle-stroke-color", dark ? "#f0f0ec" : "#1c1c1c");
       map.setFilter("zips-other", other);
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
       map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
@@ -345,7 +357,8 @@
         .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} Miles`));
     }
     return `<div class="title">${title}</div>` + note +
-      (z.noPop ? "" : row("ZIP Population", z.pop != null ? z.pop.toLocaleString() : "—")) +
+      (z.noPop ? "" : row("ZIP Population", z.pop == null ? "—"
+        : z.pop === 0 && poOnly.has(zip) ? "0 (PO Boxes Only)" : z.pop.toLocaleString())) +
       row("Blackout Team(s)", blackout) +
       `<div class="title closest">${heading}</div>${closest.join("")}`;
   }
@@ -390,7 +403,17 @@
   function showZip(zip) {
     const z = byZip.get(zip);
     popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip)).addTo(map);
+    highlight(zip);
   }
+
+  // the ZIP whose popup is open gets a ring, and its dot is drawn even when the
+  // filters (population, teams) would hide it
+  let highlighted = "";
+  function highlight(zip) {
+    highlighted = zip;
+    if (map.getLayer("zips-searched")) update();
+  }
+  popup.on("close", () => highlight(""));
 
   const result = document.getElementById("search-result");
   async function search(zip, fly = true) {
@@ -460,7 +483,7 @@
 
   // ---- theme switch ----
   function setupTheme() {
-    const OURS = new Set(["zips", "rings"]);
+    const OURS = new Set(["states", "zips", "rings"]);
     function apply() {
       if (theme === "auto") delete document.documentElement.dataset.theme;
       else document.documentElement.dataset.theme = theme;
@@ -490,6 +513,17 @@
 
   // ---- layers ----
   mapLoaded.then(() => {
+    // lower-48 state lines (Census 2025 cartographic boundaries, simplified; scripts/build_states.sh), under the dots
+    map.addSource("states", { type: "geojson", data: "data/states.json" });
+    map.addLayer({
+      id: "states",
+      type: "line",
+      source: "states",
+      paint: {
+        "line-color": STATE_LINE(),
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 6, 1.1, 10, 1.6],
+      },
+    });
     map.addSource("zips", { type: "geojson", data: { type: "FeatureCollection", features } });
     map.addLayer({
       id: "zips-other",
@@ -529,6 +563,13 @@
       if (kind !== "pie" || map.hasImage(e.id)) return;
       const colors = pk.split(",").map((a) => teams.find((t) => t.abbr === a).color);
       map.addImage(e.id, pieImage(colors), { pixelRatio: 2 });
+    });
+    map.addLayer({
+      id: "zips-searched",
+      type: "circle",
+      source: "zips",
+      filter: ["==", ["get", "z"], ""],
+      paint: { "circle-stroke-width": 2.5, "circle-opacity": 0.85 },
     });
     map.addSource("rings", { type: "geojson", data: { type: "FeatureCollection", features: teams.map((t) => ring(t)) } });
     map.addLayer({
