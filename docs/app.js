@@ -334,8 +334,8 @@
     let closest, heading = "Closest Teams";
     if (z.drives && z.drives.length) {
       // miles by road when the data has them; older rows only have drive time
-      closest = z.drives.map(([i, m, mi]) => line(i, `${teams[i].name}: ${duration(m)} <span class="label">(${
-        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})</span>`));
+      closest = z.drives.map(([i, m, mi]) => line(i, `${teams[i].name}: ${duration(m)} (${
+        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})`));
     } else {
       heading += ' <span class="label">(straight line)</span>';
       closest = teams

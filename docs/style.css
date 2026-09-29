@@ -106,6 +106,7 @@ section > h2:first-child { margin-top: 0; }
 
 #team-section.disabled #teams, #team-section.disabled .bulk { opacity: .4; pointer-events: none; }
 .toggles { margin-top: 10px; display: grid; gap: 4px; }
+#theme-section { margin-top: 18px; }
 
 #teams { list-style: none; margin: 0 0 10px; padding: 0; }
 #teams li {
@@ -155,7 +156,7 @@ section > h2:first-child { margin-top: 0; }
 }
 .maplibregl-popup-content { font: 14px/1.45 system-ui, "Segoe UI", sans-serif; color: #1c1c1c; padding: 12px 28px 12px 14px; }
 .maplibregl-popup-content .title { font-size: 15px; }
-.maplibregl-popup-content .closest { margin-top: 12px; color: #8a8a85; text-decoration: underline; text-underline-offset: 3px; }
+.maplibregl-popup-content .closest { margin-top: 12px; color: #8a8a85; }
 .maplibregl-popup-content .label { color: #8a8a85; }
 
 @media (max-width: 720px) {
