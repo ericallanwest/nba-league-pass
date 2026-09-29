@@ -260,15 +260,16 @@
   const duration = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} hr ${m % 60} min`);
   const row = (label, value) => `<div><span class="label">${label}:</span> ${value}</div>`;
 
-  function describe(zip) {
-    const z = byZip.get(zip);
+  // z: a map ZIP's record, or one built for a search-only ZIP; note: extra lines under the title
+  function describe(zip, z = byZip.get(zip), note = postCensusNote(zip)) {
     let title = `ZIP ${zip}`;
     if (z.place) {
       const cut = z.place.lastIndexOf(", ");
       const st = z.place.slice(cut + 2);
       title = `${z.place.slice(0, cut)}, ${STATES[st] || st} (${zip})`;
     }
-    const blackout = !z.idxs ? "No data from NBA.com"
+    const blackout = z.idxs === undefined ? "Not looked up yet"
+      : !z.idxs ? "No data from NBA.com"
       : z.idxs.length ? z.idxs.map((i) => teams[i].name).join("/")
       : "None";
     const crow = (t) => Math.round(miles(z.lat, z.lon, t.lat, t.lon)).toLocaleString();
@@ -285,24 +286,65 @@
         .slice(0, 5)
         .map(({ t }) => `<div>${t.name}: ${crow(t)} Miles</div>`);
     }
-    return `<div class="title">${title}</div>` +
-      row("Population", z.pop != null ? z.pop.toLocaleString() : "—") +
+    return `<div class="title">${title}</div>` + note +
+      (z.noPop ? "" : row("Population", z.pop != null ? z.pop.toLocaleString() : "—")) +
       row("Blackout Team(s)", blackout) +
       `<div class="title closest">${heading}</div>${closest.join("")}`;
   }
+  function postCensusNote(zip) {
+    if (!data.post_census || !(zip in data.post_census)) return "";
+    const name = data.post_census[zip];
+    return (name ? `<div>${name}</div>` : "") +
+      '<div class="label">USPS ZIP newer than the 2020 Census.</div>';
+  }
+
+  // USPS ZIPs with no area of their own (PO boxes, single organizations, ...), loaded on first use
+  let extraZips;
+  const EXTRA_KIND = {
+    "PO boxes": (po) => `PO boxes at the ${po} post office`,
+    organization: () => "Single-organization ZIP",
+    "organization (unnamed)": () => "Single-organization ZIP",
+    "business reply mail": () => "Business reply mail ZIP",
+    "delivery area": () => "USPS delivery ZIP newer than the 2020 Census",
+  };
+  async function searchExtra(zip) {
+    if (extraZips === undefined) {
+      try { extraZips = await (await fetch("data/extra_zips.json")).json(); } catch { extraZips = {}; }
+    }
+    const e = extraZips[zip];
+    const parent = e && byZip.get(e[4]);
+    if (!e || !parent) return false;
+    const [kind, names, po, st, parentZip, t] = e;
+    const idxs = t === null ? undefined : t === -1 ? null : t;
+    const z = { lat: parent.lat, lon: parent.lon, idxs, place: `${po}, ${st}`, noPop: true, drives: parent.drives };
+    const note = (names ? `<div>${names}</div>` : "") +
+      `<div class="label">${(EXTRA_KIND[kind] || (() => "USPS ZIP with no Census area of its own"))(po)}, ` +
+      `within ZIP ${parentZip}'s area (shown at its point).</div>`;
+    result.textContent = idxs === undefined ? `${zip}: blackouts not looked up yet.`
+      : !idxs ? `${zip} isn't recognized by NBA.com.`
+      : idxs.length ? `Blacked out: ${idxs.map((i) => teams[i].name).join(", ")}` : "No local blackouts.";
+    map.flyTo({ center: [z.lon, z.lat], zoom: 9 });
+    popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip, z, note)).addTo(map);
+    writeHash(zip);
+    return true;
+  }
+
   function showZip(zip) {
     const z = byZip.get(zip);
     popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip)).addTo(map);
   }
 
   const result = document.getElementById("search-result");
-  function search(zip, fly = true) {
+  async function search(zip, fly = true) {
     const z = byZip.get(zip);
     if (!z) {
+      popup.remove();
       const st = data.hidden && data.hidden[zip];
-      result.textContent = st
-        ? `${STATES[st] || st} isn't shown on the map: none of its ZIPs has a local blackout (see Notes).`
-        : `${zip} isn't in the Census ZIP areas (it may be a PO-box-only ZIP).`;
+      if (st) {
+        result.textContent = `${STATES[st] || st} isn't shown on the map: none of its ZIPs has a local blackout (see Notes).`;
+      } else if (!(await searchExtra(zip))) {
+        result.textContent = `${zip} isn't a USPS ZIP code we know of.`;
+      }
       return;
     }
     result.textContent = !z.idxs ? "No data for this ZIP."
@@ -375,7 +417,7 @@
     }
     update();
     const zip = params.get("zip");
-    if (zip && byZip.has(zip)) {
+    if (zip && /^\d{5}$/.test(zip)) {
       document.getElementById("zip").value = zip;
       search(zip);
     }

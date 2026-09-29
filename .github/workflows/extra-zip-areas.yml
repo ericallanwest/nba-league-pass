@@ -1,0 +1,45 @@
+name: Place newer USPS ZIPs
+
+# Places the USPS delivery-area ZIPs that postdate the Census ZCTAs using HUD's
+# USPS ZIP crosswalk (needs the repository secret HUD_API_TOKEN) and commits
+# data/extra_zip_areas.csv to the branch it runs on. The site JSON picks it up
+# on the Blackout lookup workflow's next rebuild.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/extra-zip-areas.yml
+      - scripts/hud_zip_areas.py
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extra-zip-areas-${{ github.ref }}
+
+jobs:
+  place:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HUD_API_TOKEN: ${{ secrets.HUD_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Check the API token is set
+        run: |
+          [ -n "$HUD_API_TOKEN" ] || { echo "::error::Add the repository secret HUD_API_TOKEN (Settings → Secrets and variables → Actions)"; exit 1; }
+      - run: python scripts/hud_zip_areas.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
+          git add data/extra_zip_areas.csv
+          git commit -m "Place newer USPS ZIPs from HUD's crosswalk" || exit 0
+          for i in 1 2 3; do git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0; sleep 5; done
+          exit 1

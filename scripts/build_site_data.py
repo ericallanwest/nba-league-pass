@@ -20,6 +20,17 @@ ZIPs in Alaska, Puerto Rico and the other territories are left off the map (no
 ZIP there is blacked out: NBA.com reports no local teams for Alaska and doesn't
 recognize the rest); "hidden" maps each such ZIP to its state so a ZIP search
 can explain why it isn't shown.
+
+USPS ZIPs that aren't Census ZCTAs (data/extra_zip_*.csv, see
+scripts/extra_zip_details.py): delivery-area ZIPs newer than the ZCTAs are
+added as points once data/extra_zip_areas.csv places them ("post_census" maps
+each to its organization name, if any), with their parent ZCTA's point moved and
+population reduced as that file says. Until then they're search-only like the rest. The rest (PO
+boxes, single-organization ZIPs, ...) have no area, so they go in a separate
+docs/data/extra_zips.json that the ZIP search loads on demand:
+    {zip: [category, names, post office, state, containing ZIP, teams]}
+where teams is a team_idx_list, -1 if NBA.com doesn't know the ZIP, or null
+if it hasn't been looked up yet.
 """
 import csv
 import datetime
@@ -29,6 +40,7 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 OUT = os.path.join(ROOT, "docs", "data", "blackouts.json")
+EXTRA_OUT = os.path.join(ROOT, "docs", "data", "extra_zips.json")
 HIDDEN_STATES = {"AK", "PR", "VI", "GU", "MP", "AS"}
 
 
@@ -71,12 +83,38 @@ def main():
         parts = [d.split(":") for d in r["drives"].split("|") if d]
         drives[r["zip"]] = [[idx[p[0]], int(p[1]), int(p[2]) if len(p) > 2 else None] for p in parts]
 
+    # USPS ZIPs that aren't Census ZCTAs: NBA.com's answer for each, and what they are
+    extra_teams, extra_finished = {}, set()
+    for r in read_csv("extra_zips.csv", optional=True):
+        if r["status"] == "ok":
+            extra_teams[r["zip"]] = [idx[a] for a in r["nba_teams"].split("|") if a]
+            extra_finished.add(r["zip"])
+        elif r["status"] == "http 404":
+            extra_finished.add(r["zip"])
+    details = {r["zip"]: r for r in read_csv("extra_zip_details.csv", optional=True)}
+    areas = {r["zip"]: r for r in read_csv("extra_zip_areas.csv", optional=True)}
+    moved = {r["parent"]: (float(r["parent_lat"]), float(r["parent_lon"])) for r in areas.values() if r["parent_lat"]}
+    carved = {}  # parent ZCTA -> population now in its newer USPS ZIPs
+    for r in areas.values():
+        if r["population"]:
+            carved[r["parent"]] = carved.get(r["parent"], 0) + int(float(r["population"]))
+
     zips = []
     for r in read_csv("zcta_centroids.csv"):
         z = r["zip"]
         if z in hidden:
             continue
-        zips.append([z, round(float(r["lat"]), 4), round(float(r["lon"]), 4), blackouts.get(z), places.get(z, ""), population.get(z), drives.get(z)])
+        lat, lon = moved.get(z, (float(r["lat"]), float(r["lon"])))
+        pop = population.get(z)
+        if pop is not None and z in carved:
+            pop = max(0, pop - carved[z])
+        zips.append([z, round(lat, 4), round(lon, 4), blackouts.get(z), places.get(z, ""), pop, drives.get(z)])
+    for z, r in sorted(areas.items()):
+        d = details[z]
+        zips.append([z, float(r["lat"]), float(r["lon"]), extra_teams.get(z), f"{d['post_office']}, {d['state']}",
+                     int(float(r["population"])) if r["population"] else None, None])
+        if z in extra_finished:
+            finished.add(z)
 
     out = {
         "updated": datetime.date.today().isoformat(),
@@ -88,14 +126,26 @@ def main():
         "population_source": f"ACS {pop_rows[0]['acs_year']} 5-year" if pop_rows else None,
         "zips": zips,
         "hidden": hidden,
+        "post_census": {z: details[z]["names"] for z in sorted(areas)},
         "lookup_remaining": sum(z[0] not in finished for z in zips),
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, separators=(",", ":"))
 
+    extra = {}
+    for z, d in details.items():
+        if z in areas or d["state"] in HIDDEN_STATES:
+            continue
+        teams = extra_teams.get(z, -1 if z in extra_finished else None)
+        extra[z] = [d["category"], d["names"], d["post_office"], d["state"], d["zcta"], teams]
+    if details:
+        with open(EXTRA_OUT, "w", encoding="utf-8") as f:
+            json.dump(extra, f, separators=(",", ":"))
+
     looked_up = sum(z[3] is not None for z in zips)
-    print(f"wrote {OUT}: {len(zips)} ZIPs, {looked_up} with blackout data")
+    print(f"wrote {OUT}: {len(zips)} ZIPs ({len(areas)} newer USPS areas), {looked_up} with blackout data; "
+          f"{len(extra)} search-only ZIPs")
 
 
 if __name__ == "__main__":
