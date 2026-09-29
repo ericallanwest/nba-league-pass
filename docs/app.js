@@ -442,10 +442,12 @@
     else result.textContent = "Enter a 5-digit ZIP code.";
   });
 
-  // 75-mile circle around an arena, as a geodesic ring
-  function ring(t, radiusMiles = 75, steps = 96) {
-    const r = Math.PI / 180, d = radiusMiles / 3958.8;
-    const lat1 = t.lat * r, lon1 = t.lon * r;
+  // a team's territory ring, as a geodesic circle: 75 miles beyond its home city's farthest
+  // limits (t.ring = [lat, lon, miles], from data/territories.csv), or 75 miles around the arena
+  function ring(t, steps = 96) {
+    const [lat, lon, miles] = t.ring || [t.lat, t.lon, 75];
+    const r = Math.PI / 180, d = miles / 3958.8;
+    const lat1 = lat * r, lon1 = lon * r;
     const coords = [];
     for (let i = 0; i <= steps; i++) {
       const b = (2 * Math.PI * i) / steps;

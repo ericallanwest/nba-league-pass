@@ -6,10 +6,12 @@ Usage:
 Output shape (arrays instead of objects to keep the file small):
     {
       "updated": "YYYY-MM-DD",
-      "teams": [{"abbr", "city", "name", "arena", "lat", "lon", "color"}, ...],
+      "teams": [{"abbr", "city", "name", "arena", "lat", "lon", "color", "ring"}, ...],
       "population_source": "ACS 2024 5-year" | null,
       "zips": [[zip, lat, lon, team_idx_list | null, "Town, ST", population | null, drives | null], ...]
     }
+ring is [lat, lon, miles]: the team's 75-mile territory circle (data/territories.csv,
+see scripts/territories.py), absent if that file is missing.
 drives is [[team_idx, minutes, miles | null], ...] for the closest arenas by
 drive time (miles by road; null in older rows computed without distance),
 [] if the ZIP can't be routed, and null if drive times haven't been computed.
@@ -56,6 +58,8 @@ def read_csv(name, optional=False):
 def main():
     teams = read_csv("teams.csv")
     idx = {t["abbr"]: i for i, t in enumerate(teams)}
+    rings = {r["abbr"]: [float(r["lat"]), float(r["lon"]), float(r["ring_radius_mi"])]
+             for r in read_csv("territories.csv", optional=True)}
 
     blackouts, finished = {}, set()
     for r in read_csv("nba_blackouts.csv"):
@@ -124,6 +128,7 @@ def main():
         "teams": [
             {k: t[k] for k in ("abbr", "city", "name", "arena", "color")}
             | {"lat": float(t["lat"]), "lon": float(t["lon"])}
+            | ({"ring": rings[t["abbr"]]} if t["abbr"] in rings else {})
             for t in teams
         ],
         "population_source": f"ACS {pop_rows[0]['acs_year']} 5-year" if pop_rows else None,
