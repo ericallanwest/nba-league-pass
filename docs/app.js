@@ -311,18 +311,22 @@
       : z.idxs.length ? z.idxs.map((i) => teams[i].name).join("/")
       : "None";
     const crow = (t) => Math.round(miles(z.lat, z.lon, t.lat, t.lon)).toLocaleString();
+    // teams blacked out here keep the dark text; the rest are in the lighter label color
+    // (all dark when there's no blackout data to go by)
+    const out = (i) => Array.isArray(z.idxs) && !z.idxs.includes(i);
+    const line = (i, text) => `<div${out(i) ? ' class="label"' : ""}>${text}</div>`;
     let closest, heading = "Closest Teams";
     if (z.drives && z.drives.length) {
       // miles by road when the data has them; older rows only have drive time
-      closest = z.drives.map(([i, m, mi]) => `<div>${teams[i].name}: ${duration(m)} <span class="label">(${
-        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})</span></div>`);
+      closest = z.drives.map(([i, m, mi]) => line(i, `${teams[i].name}: ${duration(m)} <span class="label">(${
+        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})</span>`));
     } else {
       heading += ' <span class="label">(straight line)</span>';
       closest = teams
-        .map((t) => ({ t, d: miles(z.lat, z.lon, t.lat, t.lon) }))
+        .map((t, i) => ({ t, i, d: miles(z.lat, z.lon, t.lat, t.lon) }))
         .sort((a, b) => a.d - b.d)
         .slice(0, 5)
-        .map(({ t }) => `<div>${t.name}: ${crow(t)} Miles</div>`);
+        .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} Miles`));
     }
     return `<div class="title">${title}</div>` + note +
       (z.noPop ? "" : row("ZIP Population", z.pop != null ? z.pop.toLocaleString() : "—")) +
