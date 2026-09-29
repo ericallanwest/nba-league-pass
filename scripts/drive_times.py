@@ -15,11 +15,20 @@ road near its center point). Rows in the older "ABBR:minutes" form, without
 distance, are routed again.
 Appends as it goes and skips ZIPs already done, so a run cut short by the
 daily quota resumes where it stopped.
+
+To make the most of the quota:
+- each ZIP's point is first snapped to the nearest road (ORS snap API, a
+  separate quota), since a point ORS can't place on a road makes it reject the
+  whole request;
+- when a request is still rejected, the ZIP ORS names is dropped and the rest
+  retried (one extra request), instead of splitting the batch in half repeatedly;
+- the most populated ZIPs go first, so a run cut short covers the most people.
 """
 import argparse
 import csv
 import math
 import os
+import re
 import sys
 import time
 
@@ -29,10 +38,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 OUT = os.path.join(DATA, "drive_times.csv")
 API = "https://api.openrouteservice.org/v2/matrix/driving-car"
+SNAP_API = "https://api.openrouteservice.org/v2/snap/driving-car"
 
 CANDIDATES = 8        # arenas routed per ZIP, by straight-line distance
 KEEP = 5              # drives kept per ZIP
 MAX_ROUTES = 3500     # ORS limit on sources x destinations per request
+SNAP_CHUNK = 1000     # points per snap request
+SNAP_RADIUS = 5000    # meters to look for a road around a ZIP's point
+# population tiers, routed in this order (within a tier, ZIPs are grouped by candidate arenas)
+POP_TIERS = (25000, 10000, 2500, 500, 0)
 # no road connection to any arena
 NO_DRIVE_STATES = {"AK", "HI", "PR", "VI", "GU", "AS", "MP"}
 
@@ -82,6 +96,8 @@ class Matrix:
                         for srow, mrow in zip(d["durations"], d["distances"])]
             if "quota" in r.text.lower():  # daily quota, sent as 403 or 429
                 raise Budget()
+            if "routable point" in r.text:  # a location with no road nearby, whatever the status code
+                raise Unroutable(r.text[:300])
             if r.status_code == 429:  # per-minute rate limit
                 time.sleep(60)
                 continue
@@ -90,8 +106,29 @@ class Matrix:
                 continue
             if r.status_code in (401, 403):
                 raise SystemExit(f"ORS rejected the API key: HTTP {r.status_code} {r.text[:200]}")
-            raise Unroutable(r.text[:200])
+            raise Unroutable(r.text[:300])
         raise Unroutable("retries exhausted")
+
+    def snap(self, points):
+        """Each (lat, lon) moved to the nearest road within SNAP_RADIUS, or kept as is
+        when ORS finds none. Best effort: any failure keeps the original points."""
+        out = list(points)
+        for start in range(0, len(points), SNAP_CHUNK):
+            chunk = points[start:start + SNAP_CHUNK]
+            body = {"locations": [[lon, lat] for lat, lon in chunk], "radius": SNAP_RADIUS}
+            try:
+                r = self.session.post(SNAP_API, json=body, timeout=120)
+                time.sleep(self.pause)
+                r.raise_for_status()
+                snapped = r.json()["locations"]
+            except (requests.RequestException, ValueError, KeyError) as e:
+                print(f"::warning::Couldn't snap ZIP points to roads ({e}); routing from the Census points",
+                      file=sys.stderr)
+                return out
+            for i, s in enumerate(snapped):
+                if s and s.get("location"):
+                    out[start + i] = (s["location"][1], s["location"][0])
+        return out
 
 
 class Budget(Exception):
@@ -99,12 +136,17 @@ class Budget(Exception):
 
 
 class Unroutable(Exception):
-    pass
+    def __init__(self, text):
+        super().__init__(text)
+        # ORS names the location it couldn't place: "... of specified coordinate 12: ..."
+        m = re.search(r"coordinate (\d+)", text)
+        self.index = int(m.group(1)) if m else None
 
 
 def route(matrix, batch, teams):
-    """Yield (zip, drives) for a batch of ZIPs, halving the batch on a rejection
-    so one unroutable ZIP doesn't sink its neighbours."""
+    """Yield (zip, drives) for a batch of ZIPs. On a rejection, drop the ZIP ORS
+    names and retry the rest; if it names none, halve the batch, so one
+    unroutable ZIP doesn't sink its neighbours."""
     arena_idx = sorted({i for z in batch for i in z["cands"]})
     arenas = [teams[i] for i in arena_idx]
     try:
@@ -113,6 +155,11 @@ def route(matrix, batch, teams):
         if len(batch) == 1:
             print(f"  {batch[0]['zip']}: unroutable ({e})", file=sys.stderr)
             yield batch[0]["zip"], ""
+            return
+        if e.index is not None and e.index < len(batch):
+            print(f"  {batch[e.index]['zip']}: unroutable ({e})", file=sys.stderr)
+            yield batch[e.index]["zip"], ""
+            yield from route(matrix, batch[:e.index] + batch[e.index + 1:], teams)
             return
         mid = len(batch) // 2
         yield from route(matrix, batch[:mid], teams)
@@ -178,6 +225,8 @@ def main():
         # route to a point on a public road by the arena when the arena's own point doesn't snap to one
         t["route"] = [float(t["route_lon"]), float(t["route_lat"])] if t.get("route_lat") else [t["lon"], t["lat"]]
     states = {r["zip"]: r["state"] for r in read_csv("zcta_places.csv")}
+    population = {r["zip"]: int(r["population"]) for r in read_csv("zcta_population.csv")
+                  if r["population"].lstrip("-").isdigit()}
     done = set()
     if os.path.exists(OUT):
         # rows without driving distance (the older ABBR:minutes form) get routed again
@@ -193,9 +242,11 @@ def main():
             continue
         lat, lon = float(r["lat"]), float(r["lon"])
         by_dist = sorted(range(len(teams)), key=lambda i: miles(lat, lon, teams[i]["lat"], teams[i]["lon"]))
-        todo.append({"zip": r["zip"], "lat": lat, "lon": lon, "cands": by_dist[:CANDIDATES]})
-    # ZIPs with the same candidate arenas share requests with no wasted routes
-    todo.sort(key=lambda z: (sorted(z["cands"]), z["lat"]))
+        todo.append({"zip": r["zip"], "lat": lat, "lon": lon, "cands": by_dist[:CANDIDATES],
+                     "tier": next(i for i, t in enumerate(POP_TIERS) if population.get(r["zip"], 0) >= t)})
+    # most populated first; within a tier, ZIPs with the same candidate arenas share
+    # requests with no wasted routes
+    todo.sort(key=lambda z: (z["tier"], sorted(z["cands"]), z["lat"]))
     print(f"{len(done)} done, {len(skipped)} with no road route, {len(todo)} to route", file=sys.stderr)
 
     new_file = not os.path.exists(OUT)
@@ -208,6 +259,12 @@ def main():
             return
     if args.check_arenas:
         return
+    snapped = matrix.snap([(z["lat"], z["lon"]) for z in todo])
+    moved = 0
+    for z, (lat, lon) in zip(todo, snapped):
+        moved += (lat, lon) != (z["lat"], z["lon"])
+        z["lat"], z["lon"] = lat, lon
+    print(f"Snapped {moved} of {len(todo)} ZIP points to the nearest road", file=sys.stderr)
     n = 0
     with open(OUT, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
