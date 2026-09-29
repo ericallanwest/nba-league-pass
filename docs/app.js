@@ -122,7 +122,7 @@
 
   // ---- map styling from the filters ----
   const NONE_COLOR = "#2a9d8f";
-  const OUTLINE = dark ? "#9a9a94" : "#5f5f58"; // darker outline on dots with a blackout
+  const OUTLINE = dark ? "#9a9a94" : "#5f5f58"; // darker dot outline (colored dots; gray dots with 2+ teams)
   const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
   const COUNT_EXPR = {
     any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
@@ -342,12 +342,12 @@
       source: "zips",
       paint: {
         "circle-radius": radius(0.8),
-        // gray for ZIPs outside the filter; a darker outline marks ones where some team is still blacked out
+        // gray for ZIPs outside the filter; a darker outline marks ones blacked out for 2+ teams
         "circle-color": dark ? "#4a4a46" : "#d2d2cc",
         "circle-stroke-color": OUTLINE,
         // thin when zoomed out, where thousands of outlined dots would turn the map dark
         "circle-stroke-width": ["interpolate", ["linear"], ["zoom"],
-          3, ["case", [">", ["get", "n"], 0], 0.25, 0], 7, ["case", [">", ["get", "n"], 0], 0.9, 0]],
+          3, ["case", [">=", ["get", "n"], 2], 0.25, 0], 7, ["case", [">=", ["get", "n"], 2], 0.9, 0]],
         "circle-opacity": 0.85,
       },
     });
