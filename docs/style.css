@@ -7,6 +7,7 @@
   --accent: #1d428a;
   --hover: #ebebe6;
   --other: #b9b9b2;
+  --swatch-outline: #5f5f58; /* the map's dot outline */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -18,11 +19,13 @@
     --accent: #7fa3ec;
     --hover: #262626;
     --other: #555550;
+    --swatch-outline: #9a9a94;
   }
 }
 :root[data-theme="dark"] {
   --bg: #121212; --panel: #1b1b1b; --text: #ececec; --muted: #a3a3a0;
   --border: #333; --accent: #7fa3ec; --hover: #262626; --other: #555550;
+  --swatch-outline: #9a9a94;
 }
 
 * { box-sizing: border-box; }
@@ -113,7 +116,7 @@ section > h2:first-child { margin-top: 0; }
 #teams li:hover { background: var(--hover); }
 #teams label { display: flex; align-items: center; gap: 8px; flex: 1; cursor: pointer; min-width: 0; }
 #teams .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+.swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px var(--swatch-outline); }
 #teams .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
 #teams .only {
   visibility: hidden; padding: 0 6px; font-size: 11px; line-height: 18px;
