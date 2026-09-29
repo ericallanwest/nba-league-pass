@@ -95,7 +95,7 @@
   let noData = params.get("nodata") === "1" || params.get("blackouts") === "none";
   if (params.get("blackouts") === "none") selected = new Set();
   document.querySelector(`#count input[value="${mode}"]`).checked = true;
-  if (params.get("other") === "1") showOther.checked = true;
+  if (params.get("other") === "0") showOther.checked = false;
   // popup's closest teams: by drive time, or by straight-line distance to the arena
   let dist = params.get("dist") === "line" ? "line" : "drive";
   let shown = null; // describe() arguments for the open popup, if any
@@ -129,7 +129,7 @@
     }
     if (!rings.checked) p.set("rings", "0");
     if (!sizePop.checked) p.set("size", "0");
-    if (showOther.checked) p.set("other", "1");
+    if (!showOther.checked) p.set("other", "0");
     if (dist === "line") p.set("dist", "line");
     zip = zip || (shown ? shown[0] : ""); // keep an open popup's ZIP in the link
     if (zip) p.set("zip", zip);
