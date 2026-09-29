@@ -8,14 +8,27 @@
   const isDark = () => (theme === "auto" ? systemDark.matches : theme === "dark");
   let dark = isDark();
   const basemap = () => `https://basemaps.cartocdn.com/gl/${dark ? "dark-matter" : "positron"}-gl-style/style.json`;
+  const HOME = [[-125, 24], [-66.5, 49.5]]; // the lower 48
   const map = new maplibregl.Map({
     container: "map",
     style: basemap(),
-    bounds: [[-125, 24], [-66.5, 49.5]],
+    bounds: HOME,
     fitBoundsOptions: { padding: 20 },
     attributionControl: { compact: true },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+  // Home button under + and -: back to the default view (and north up, if the map was rotated)
+  map.addControl({
+    onAdd() {
+      const box = document.createElement("div");
+      box.className = "maplibregl-ctrl maplibregl-ctrl-group";
+      box.innerHTML = `<button type="button" class="home-btn" title="Zoom to the whole map" aria-label="Zoom to the whole map">
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3.2 2.8 9.4h2.2V16h3.7v-4.2h2.6V16h3.7V9.4h2.2z" fill="currentColor"/></svg></button>`;
+      box.querySelector("button").onclick = () => map.fitBounds(HOME, { padding: 20, bearing: 0, pitch: 0 });
+      return box;
+    },
+    onRemove() {},
+  }, "top-right");
   // listen before awaiting the data, or a fast basemap can fire "load" before we're listening
   const mapLoaded = new Promise((resolve) => map.once("load", resolve));
 
