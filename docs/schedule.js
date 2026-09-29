@@ -145,6 +145,8 @@
     if (fromHash()) document.getElementById("games").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   renderGames(fromHash());
+  // arriving from the map with #team=ABBR: go straight to the table
+  if (fromHash()) document.getElementById("games").scrollIntoView({ block: "start" });
 
   // tooltip: hover on desktop, tap on touch
   function show(e) {
