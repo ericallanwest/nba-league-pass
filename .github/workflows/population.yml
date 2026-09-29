@@ -20,6 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # the branch's latest commit, not the triggering one: a run that waited
+          # in the concurrency queue would otherwise start from stale data
+          ref: ${{ github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
