@@ -158,6 +158,14 @@
     update();
   }
 
+  // arena marker clicks: from the all-teams view, show just that team; after that each click
+  // adds or removes one team, so several can be picked (or dropped) on the map
+  function toggleTeam(abbr) {
+    if (selected.size === teams.length) return solo(abbr);
+    selected.has(abbr) ? selected.delete(abbr) : selected.add(abbr);
+    update();
+  }
+
   // ---- map styling from the filters ----
   const NONE_COLOR = "#2a9d8f";
   const GRAY = () => (dark ? "#4a4a46" : "#d2d2cc");
@@ -275,8 +283,8 @@
     el.className = "arena";
     el.style.background = t.color;
     el.textContent = t.abbr;
-    el.title = `${t.city} ${t.name} — ${t.arena}. Click to show only this team.`;
-    el.addEventListener("click", (e) => { e.stopPropagation(); solo(t.abbr); });
+    el.title = `${t.city} ${t.name} — ${t.arena}. Click to add or remove this team.`;
+    el.addEventListener("click", (e) => { e.stopPropagation(); toggleTeam(t.abbr); });
     markers.set(t.abbr, el);
     new maplibregl.Marker({ element: el }).setLngLat([t.lon, t.lat]).addTo(map);
   });
