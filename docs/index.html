@@ -42,7 +42,6 @@
         <label><input type="radio" name="count" value="any" checked><span>All</span></label>
         <label><input type="radio" name="count" value="one"><span>One</span></label>
         <label><input type="radio" name="count" value="multiple"><span>Multiple</span></label>
-        <label><input type="radio" name="count" value="none"><span>None</span></label>
       </div>
 
       <p id="summary" aria-live="polite"></p>
@@ -74,7 +73,7 @@
         </details>
       </div>
       <label class="toggle"><input type="checkbox" id="size-pop" checked> Size ZIPs by population</label>
-      <label class="toggle"><input type="checkbox" id="show-other"> Show ZIPs outside the filter</label>
+      <label class="toggle"><input type="checkbox" id="show-other" checked> Show ZIPs outside the filter</label>
     </section>
 
     <section id="dist-section">
@@ -101,10 +100,10 @@
         <li><strong>Points</strong> are the Census Bureau's 2025 ZIP Code Tabulation Areas, at each area's internal point, plus 203 USPS ZIPs created since the 2020 Census, placed with <a href="https://www.huduser.gov/portal/datasets/usps_crosswalk.html">HUD's USPS ZIP crosswalk</a>. About 7,000 other USPS ZIPs (PO-box sections, single organizations) have no area of their own; they aren't drawn, but the search finds them (<a href="https://data.hrsa.gov/DataDownload/GeoCareNavigator/ZIP%20Code%20to%20ZCTA%20Crosswalk.xlsx">HRSA crosswalk</a>).</li>
         <li><strong>Population</strong> is from the Census Bureau's American Community Survey<span id="pop-source"></span>; for the newer ZIPs it's estimated from Census tracts. The map starts at 500+ people; drag the slider to 0 to see every ZIP. "PO Boxes Only" marks ZIPs with no residents because they serve only post office boxes.</li>
         <li><strong>Town and state</strong> are the USPS city name (<a href="https://pypi.org/project/zipcodes/">zipcodes</a> package). <strong>State lines</strong> are the Census Bureau's 2025 cartographic boundaries, simplified.</li>
-        <li><strong>Colors:</strong> a team color marks a ZIP blacked out for that team alone. A ZIP blacked out for several teams is a pie, one equal slice per team, each turned toward its arena (Knicks/Nets and Lakers/Clippers split north/south). <em>One</em> and <em>Multiple</em> count all of a ZIP's teams, not just the selected ones.</li>
-        <li><strong>Rings</strong> show each team's 75-mile marketing territory, which the NBA measures from the home city's limits: the smallest circle holding every point within 75 miles of them (Census 2025 city boundaries; Toronto from OpenStreetMap; San Francisco without the Farallon Islands). They show for the selected teams, or for every team when none is selected or under <em>None</em>.</li>
+        <li><strong>Colors:</strong> a team color marks a ZIP blacked out for that team alone. A ZIP blacked out for several teams is a pie, one equal slice per team, each turned toward its arena (Knicks/Nets and Lakers/Clippers split north/south). <em>One</em> and <em>Multiple</em> count all of a ZIP's teams, not just the selected ones. Teal marks ZIPs with no data: NBA.com lists no local teams for them (or doesn't recognize them), though some are likely blacked out all the same.</li>
+        <li><strong>Rings</strong> show each team's 75-mile marketing territory, which the NBA measures from the home city's limits: the smallest circle holding every point within 75 miles of them (Census 2025 city boundaries; Toronto from OpenStreetMap; San Francisco without the Farallon Islands). They show for the selected teams, or for every team when none is selected.</li>
         <li><strong>Closest teams</strong> are ranked by typical drive time without traffic, by road from each ZIP's nearest road point (<a href="https://openrouteservice.org">openrouteservice</a>, © OpenStreetMap contributors), or by straight-line distance to the arena (<em>Closest teams by</em>). Where drive times aren't computed yet, or there's no road route (Hawaii), drive time falls back to straight line.</li>
-        <li><strong>Not shown:</strong> Alaska, Puerto Rico and the other territories, where no ZIP is blacked out, and a few ZIPs NBA.com doesn't recognize (gray with <em>Show ZIPs outside the filter</em>).</li>
+        <li><strong>Not shown:</strong> Alaska, where NBA.com lists no local teams for any ZIP, and Puerto Rico and the other territories, whose ZIPs it doesn't recognize.</li>
         <li>Data last built <span id="updated">—</span>. Code and data: <a href="https://github.com/ericallanwest/nba-league-pass">github.com/ericallanwest/nba-league-pass</a>.</li>
       </ul>
     </details>

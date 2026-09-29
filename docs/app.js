@@ -89,9 +89,13 @@
   const POP_STOPS = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
   const TOP = POP_STOPS.length;
   const DEFAULT_LO = POP_STOPS.indexOf(500); // default view leaves out the smallest ZIPs so the map isn't so busy
-  let mode = ["any", "one", "multiple", "none"].includes(params.get("blackouts")) ? params.get("blackouts") : "any";
+  let mode = ["any", "one", "multiple"].includes(params.get("blackouts")) ? params.get("blackouts") : "any";
+  // ZIPs NBA.com lists no local teams for (or doesn't recognize), shown as teal dots: some are
+  // likely blacked out all the same. "blackouts=none" is the older link form
+  let noData = params.get("nodata") === "1" || params.get("blackouts") === "none";
+  if (params.get("blackouts") === "none") selected = new Set();
   document.querySelector(`#count input[value="${mode}"]`).checked = true;
-  if (params.get("other") === "1") showOther.checked = true;
+  if (params.get("other") === "0") showOther.checked = false;
   // popup's closest teams: by drive time, or by straight-line distance to the arena
   let dist = params.get("dist") === "line" ? "line" : "drive";
   let shown = null; // describe() arguments for the open popup, if any
@@ -118,13 +122,14 @@
     const p = new URLSearchParams();
     if (selected.size !== teams.length) p.set("teams", [...selected].join(","));
     if (mode !== "any") p.set("blackouts", mode);
+    if (noData) p.set("nodata", "1");
     if (!popDefault()) {
       const [lo, hi] = popRange();
       p.set("pop", `${lo}-${hi === Infinity ? "" : hi}`);
     }
     if (!rings.checked) p.set("rings", "0");
     if (!sizePop.checked) p.set("size", "0");
-    if (showOther.checked) p.set("other", "1");
+    if (!showOther.checked) p.set("other", "0");
     if (dist === "line") p.set("dist", "line");
     zip = zip || (shown ? shown[0] : ""); // keep an open popup's ZIP in the link
     if (zip) p.set("zip", zip);
@@ -133,6 +138,7 @@
   }
 
   // ---- team list ----
+  const NONE_COLOR = "#2a9d8f"; // ZIPs with no data from NBA.com
   const list = document.getElementById("teams");
   const order = teams.map((_, i) => i).sort((a, b) => teams[a].city.localeCompare(teams[b].city));
   for (const i of order) {
@@ -140,7 +146,7 @@
     const li = document.createElement("li");
     li.innerHTML = `
       <label>
-        <input type="checkbox" value="${t.abbr}">
+        <input type="checkbox" class="team" value="${t.abbr}">
         <span class="swatch" style="background:${t.color}"></span>
         <span class="name">${t.city} ${t.name}</span>
       </label>
@@ -151,6 +157,24 @@
       update();
     });
     li.querySelector(".only").addEventListener("click", () => solo(t.abbr));
+    list.appendChild(li);
+  }
+  // last row: ZIPs with no data from NBA.com
+  {
+    let n = 0, pop = 0;
+    for (const z of byZip.values()) if (z.idxs && !z.idxs.length || z.idxs === null) { n++; pop += z.pop || 0; }
+    const li = document.createElement("li");
+    li.className = "no-data";
+    li.innerHTML = `
+      <label>
+        <input type="checkbox" id="no-data">
+        <span class="swatch" style="background:${NONE_COLOR}"></span>
+        <span class="name">Show ZIPs with no data</span>
+      </label>
+      <span class="count" title="${pop.toLocaleString()} people in ${n.toLocaleString()} ZIP codes NBA.com lists no local teams for">${compact(pop)}</span>`;
+    const cb = li.querySelector("input");
+    cb.checked = noData;
+    cb.addEventListener("change", () => { noData = cb.checked; update(); });
     list.appendChild(li);
   }
   document.getElementById("all").onclick = () => { selected = new Set(teams.map((t) => t.abbr)); update(); };
@@ -186,15 +210,14 @@
   }
 
   // ---- map styling from the filters ----
-  const NONE_COLOR = "#2a9d8f";
   const GRAY = () => (dark ? "#4a4a46" : "#d2d2cc");
   const OUTLINE = () => (dark ? "#9a9a94" : "#5f5f58"); // darker outline on blacked-out dots
   const RING = () => (dark ? "#f0f0ec" : "#1c1c1c");
   const STATE_LINE = () => (dark ? "#8a8a85" : "#8f8f88"); // stronger than the basemap's faint borders
-  const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
+  const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2 };
   const COUNT_EXPR = {
     any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
-    multiple: [">=", ["get", "n"], 2], none: ["==", ["get", "n"], 0],
+    multiple: [">=", ["get", "n"], 2],
   };
   const has = (abbr) => ["in", `|${abbr}|`, ["get", "t"]];
 
@@ -204,14 +227,13 @@
     const [lo, hi] = popRange();
     const popCond = popFull() ? true
       : ["all", [">=", ["get", "p"], lo], ...(hi === Infinity ? [] : [["<=", ["get", "p"], hi]])];
-    const hit = mode === "none"
-      ? ["all", COUNT_EXPR.none, popCond]
-      : ["all", [">", matches, 0], COUNT_EXPR[mode], popCond];
+    const none = ["<=", ["get", "n"], 0]; // no teams from NBA.com
+    const hit = ["all", ["any", sel.length ? ["all", [">", matches, 0], COUNT_EXPR[mode]] : false, noData ? none : false], popCond];
     const teamColor = sel.length ? ["case", ...sel.flatMap((t) => [has(t.abbr), t.color]), "#888"] : "#888";
     // like the Tableau viz, only single-team ZIPs take a team color; a ZIP blacked out for two or
     // more teams is gray (outlined) even when one of them is selected
     // pies cover 2+ team ZIPs; their circle underneath only draws the outline
-    const color = mode === "none" ? NONE_COLOR : ["case", [">=", ["get", "n"], 2], "rgba(0,0,0,0)", teamColor];
+    const color = ["case", none, NONE_COLOR, [">=", ["get", "n"], 2], "rgba(0,0,0,0)", teamColor];
     return { hit, other: ["all", ["!", hit], popCond], color };
   }
 
@@ -225,22 +247,23 @@
       3, ["*", 1.6 * k * g, f], 6, ["*", 3 * k * g, f], 10, ["*", 6 * k * g, f], 13, ["*", 9 * k * g, f]];
   }
 
+  // ZIPs (and people) matching the team filter, and the no-data ZIPs shown
   function matching() {
     const [lo, hi] = popRange();
-    let n = 0, people = 0;
+    const r = { n: 0, people: 0, nd: 0, ndPeople: 0 };
     for (const z of byZip.values()) {
-      if (!z.idxs || !COUNT_TEST[mode](z.idxs.length)) continue;
-      if (mode !== "none" && !z.idxs.some((i) => selected.has(teams[i].abbr))) continue;
       if (!popFull() && (z.pop == null || z.pop < lo || z.pop > hi)) continue;
-      n++;
-      people += z.pop || 0;
+      if (!z.idxs || !z.idxs.length) {
+        if (noData) { r.nd++; r.ndPeople += z.pop || 0; }
+      } else if (COUNT_TEST[mode](z.idxs.length) && z.idxs.some((i) => selected.has(teams[i].abbr))) {
+        r.n++; r.people += z.pop || 0;
+      }
     }
-    return { n, people };
+    return r;
   }
 
   function update() {
-    for (const cb of list.querySelectorAll("input")) cb.checked = selected.has(cb.value);
-    document.getElementById("team-section").classList.toggle("disabled", mode === "none");
+    for (const cb of list.querySelectorAll("input.team")) cb.checked = selected.has(cb.value);
 
     const [lo, hi] = popRange();
     const fmt = (v) => v.toLocaleString();
@@ -262,7 +285,7 @@
       map.setPaintProperty("rings", "line-color", RING());
       map.setPaintProperty("states", "line-color", STATE_LINE());
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
-      map.setFilter("zips-pie", mode === "none" ? false : ["all", hit, [">=", ["get", "n"], 2]]);
+      map.setFilter("zips-pie", ["all", hit, [">=", ["get", "n"], 2]]);
       map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
       map.setFilter("zips-searched", ["==", ["get", "z"], highlighted]);
       // a filtered-out ZIP gets a gray dot; one already shown just gets the ring
@@ -273,13 +296,13 @@
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
       map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
       // rings for the selected teams; every arena's when there's no selection to follow (no teams, or "None")
-      const ringTeams = mode === "none" || !selected.size ? teams.map((t) => t.abbr) : [...selected];
+      const ringTeams = !selected.size ? teams.map((t) => t.abbr) : [...selected];
       map.setFilter("rings", ["in", ["get", "abbr"], ["literal", ringTeams]]);
       map.setLayoutProperty("rings", "visibility", rings.checked ? "visible" : "none");
     }
-    for (const [abbr, el] of markers) el.style.opacity = mode === "none" || selected.has(abbr) ? 1 : 0.35;
+    for (const [abbr, el] of markers) el.style.opacity = !selected.size || selected.has(abbr) ? 1 : 0.35;
 
-    const { n, people } = matching();
+    const { n, people, nd, ndPeople } = matching();
     // older data files lack lookup_remaining; fall back to counting ZIPs without data
     const remaining = data.lookup_remaining ?? data.zips.length - looked;
     const coverage = remaining > 0
@@ -293,12 +316,12 @@
         : `blacked out for exactly one team, one of the ${k} selected`,
       multiple: all ? "blacked out for two or more teams" : single ? `blacked out for ${single} and at least one other team`
         : `blacked out for two or more teams, including one of the ${k} selected`,
-      none: "with no local blackouts",
     }[mode];
-    const pop = people ? ` (${people.toLocaleString()} people)` : "";
-    document.getElementById("summary").textContent = mode !== "none" && !selected.size
-      ? `Select a team to see its blackout area.${coverage}`
-      : `${n.toLocaleString()} ZIPs ${what}${pop}.${coverage}`;
+    const pop = (p) => (p ? ` (${p.toLocaleString()} people)` : "");
+    const ndText = `${nd.toLocaleString()} ZIPs with no data from NBA.com${pop(ndPeople)}`;
+    document.getElementById("summary").textContent = (!selected.size
+      ? (noData ? `${ndText}.` : "Select a team to see its blackout area.")
+      : `${n.toLocaleString()} ZIPs ${what}${pop(people)}.` + (noData ? ` Plus ${ndText}.` : "")) + coverage;
     writeHash();
   }
 
@@ -351,7 +374,7 @@
     const blackout = z.idxs === undefined ? "Not looked up yet"
       : !z.idxs ? "No data from NBA.com"
       : z.idxs.length ? z.idxs.map((i) => teams[i].name).join("/")
-      : "None";
+      : "No data from NBA.com";
     const crow = (t) => Math.round(miles(z.lat, z.lon, t.lat, t.lon)).toLocaleString();
     // teams blacked out here keep the dark text; the rest are in the lighter label color
     // (all dark when there's no blackout data to go by)
