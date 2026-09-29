@@ -92,6 +92,10 @@
   let mode = ["any", "one", "multiple", "none"].includes(params.get("blackouts")) ? params.get("blackouts") : "any";
   document.querySelector(`#count input[value="${mode}"]`).checked = true;
   if (params.get("other") === "1") showOther.checked = true;
+  // popup's closest teams: by drive time, or by straight-line distance to the arena
+  let dist = params.get("dist") === "line" ? "line" : "drive";
+  let shown = null; // describe() arguments for the open popup, if any
+  document.querySelector(`#dist input[value="${dist}"]`).checked = true;
   if (params.get("rings") === "0") rings.checked = false;
   if (params.get("size") === "0") sizePop.checked = false;
   const popParam = (params.get("pop") || "").match(/^(\d+)-(\d*)$/);
@@ -121,6 +125,8 @@
     if (!rings.checked) p.set("rings", "0");
     if (!sizePop.checked) p.set("size", "0");
     if (showOther.checked) p.set("other", "1");
+    if (dist === "line") p.set("dist", "line");
+    zip = zip || (shown ? shown[0] : ""); // keep an open popup's ZIP in the link
     if (zip) p.set("zip", zip);
     const h = p.toString().replace(/%2C/g, ",");
     history.replaceState(null, "", h ? `#${h}` : location.pathname + location.search);
@@ -151,6 +157,11 @@
   document.getElementById("none").onclick = () => { selected = new Set(); update(); };
   for (const el of [showOther, rings, sizePop]) el.onchange = update;
   for (const r of document.querySelectorAll("#count input")) r.onchange = () => { mode = r.value; update(); };
+  for (const r of document.querySelectorAll("#dist input")) r.onchange = () => {
+    dist = r.value;
+    if (shown) popup.setHTML(describe(...shown)); // redraw the open popup
+    update();
+  };
   for (const el of [popLo, popHi]) {
     el.oninput = () => {
       // keep the handles from crossing
@@ -347,17 +358,17 @@
     const out = (i) => Array.isArray(z.idxs) && !z.idxs.includes(i);
     const line = (i, text) => `<div${out(i) ? ' class="label"' : ""}>${text}</div>`;
     let closest, heading = "Closest Teams";
-    if (z.drives && z.drives.length) {
+    if (dist === "drive" && z.drives && z.drives.length) {
       // miles by road when the data has them; older rows only have drive time
       closest = z.drives.map(([i, m, mi]) => line(i, `${teams[i].name}: ${duration(m)} (${
         mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})`));
     } else {
-      heading += ' <span class="label">(straight line)</span>';
+      heading += " (straight line)";
       closest = teams
         .map((t, i) => ({ t, i, d: miles(z.lat, z.lon, t.lat, t.lon) }))
         .sort((a, b) => a.d - b.d)
         .slice(0, 5)
-        .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} Miles`));
+        .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} mi`));
     }
     return `<div class="title">${title}</div>` + note +
       (z.noPop ? "" : row("ZIP Population", z.pop == null ? "—"
@@ -397,6 +408,7 @@
     result.textContent = ""; // the popup has the details
     map.flyTo({ center: [z.lon, z.lat], zoom: 9 });
     popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip, z, note)).addTo(map);
+    shown = [zip, z, note]; // after addTo, whose "close" of the previous popup clears it
     writeHash(zip);
     return true;
   }
@@ -404,6 +416,7 @@
   function showZip(zip) {
     const z = byZip.get(zip);
     popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip)).addTo(map);
+    shown = [zip, z, postCensusNote(zip)]; // after addTo, whose "close" of the previous popup clears it
     highlight(zip);
   }
 
@@ -414,7 +427,7 @@
     highlighted = zip;
     if (map.getLayer("zips-searched")) update();
   }
-  popup.on("close", () => highlight(""));
+  popup.on("close", () => { shown = null; highlight(""); });
 
   const result = document.getElementById("search-result");
   async function search(zip, fly = true) {

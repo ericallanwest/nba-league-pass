@@ -77,6 +77,14 @@
       <label class="toggle"><input type="checkbox" id="show-other"> Show ZIPs outside the filter</label>
     </section>
 
+    <section id="dist-section">
+      <h2>Closest teams by</h2>
+      <div id="dist" class="segmented" role="radiogroup" aria-label="Rank closest teams by">
+        <label><input type="radio" name="dist" value="drive" checked><span>Drive time</span></label>
+        <label><input type="radio" name="dist" value="line"><span>Straight line</span></label>
+      </div>
+    </section>
+
     <section id="theme-section">
       <h2>Theme</h2>
       <div id="theme" class="segmented" role="radiogroup" aria-label="Color theme">
@@ -95,7 +103,7 @@
         <li><strong>Town and state</strong> are the USPS city name (<a href="https://pypi.org/project/zipcodes/">zipcodes</a> package). <strong>State lines</strong> are the Census Bureau's 2025 cartographic boundaries, simplified.</li>
         <li><strong>Colors:</strong> a team color marks a ZIP blacked out for that team alone. A ZIP blacked out for several teams is a pie, one equal slice per team, each turned toward its arena (Knicks/Nets and Lakers/Clippers split north/south). <em>One</em> and <em>Multiple</em> count all of a ZIP's teams, not just the selected ones.</li>
         <li><strong>Rings</strong> show each team's 75-mile marketing territory, which the NBA measures from the home city's limits: the smallest circle holding every point within 75 miles of them (Census 2025 city boundaries; Toronto from OpenStreetMap; San Francisco without the Farallon Islands). They show for the selected teams, or for every team when none is selected or under <em>None</em>.</li>
-        <li><strong>Closest teams</strong> are ranked by typical drive time without traffic, by road from each ZIP's nearest road point (<a href="https://openrouteservice.org">openrouteservice</a>, © OpenStreetMap contributors). Where drive times aren't computed yet, or there's no road route (Hawaii), the list shows straight-line distance.</li>
+        <li><strong>Closest teams</strong> are ranked by typical drive time without traffic, by road from each ZIP's nearest road point (<a href="https://openrouteservice.org">openrouteservice</a>, © OpenStreetMap contributors), or by straight-line distance to the arena (<em>Closest teams by</em>). Where drive times aren't computed yet, or there's no road route (Hawaii), drive time falls back to straight line.</li>
         <li><strong>Not shown:</strong> Alaska, Puerto Rico and the other territories, where no ZIP is blacked out, and a few ZIPs NBA.com doesn't recognize (gray with <em>Show ZIPs outside the filter</em>).</li>
         <li>Data last built <span id="updated">—</span>. Code and data: <a href="https://github.com/ericallanwest/nba-league-pass">github.com/ericallanwest/nba-league-pass</a>.</li>
       </ul>
