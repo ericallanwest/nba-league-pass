@@ -496,7 +496,7 @@
 
   // ---- layers ----
   mapLoaded.then(() => {
-    // lower-48 state lines (Census TIGER/Line 2025, simplified; scripts/build_states.sh), under the dots
+    // lower-48 state lines (Census 2025 cartographic boundaries, simplified; scripts/build_states.sh), under the dots
     map.addSource("states", { type: "geojson", data: "data/states.json" });
     map.addLayer({
       id: "states",
