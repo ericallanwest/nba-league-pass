@@ -168,4 +168,6 @@ section > h2:first-child { margin-top: 0; }
   #teams .only { visibility: visible; }
 }
 
-.home-btn { display: flex; align-items: center; justify-content: center; color: #333; }
+/* MapLibre styles control buttons as display:block; center the icon in both directions */
+.maplibregl-ctrl-group button.home-btn { display: flex; align-items: center; justify-content: center; color: #333; }
+.home-btn svg { display: block; }

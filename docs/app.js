@@ -23,7 +23,7 @@
       const box = document.createElement("div");
       box.className = "maplibregl-ctrl maplibregl-ctrl-group";
       box.innerHTML = `<button type="button" class="home-btn" title="Zoom to the whole map" aria-label="Zoom to the whole map">
-        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3.2 2.8 9.4h2.2V16h3.7v-4.2h2.6V16h3.7V9.4h2.2z" fill="currentColor"/></svg></button>`;
+        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3.6 2.8 9.8h2.2v6.6h3.7v-4.2h2.6v4.2h3.7V9.8h2.2z" fill="currentColor"/></svg></button>`;
       box.querySelector("button").onclick = () => map.fitBounds(HOME, { padding: 20, bearing: 0, pitch: 0 });
       return box;
     },
