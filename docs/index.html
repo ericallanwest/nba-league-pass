@@ -74,6 +74,16 @@
       </div>
       <label class="toggle"><input type="checkbox" id="size-pop" checked> Size ZIPs by population</label>
       <label class="toggle"><input type="checkbox" id="show-other" checked> Show ZIPs outside the filter</label>
+      <div class="toggle-row" id="no-data-row">
+        <label class="toggle"><input type="checkbox" id="no-data"> Show ZIPs with no data <span class="swatch"></span></label>
+        <details class="info">
+          <summary aria-label="About ZIPs with no data" title="About ZIPs with no data">i</summary>
+          <div class="info-body">
+            NBA.com's lookup lists no local teams for <span id="no-data-count">these ZIPs</span>, or doesn't recognize them.
+            Some are likely blacked out all the same. They show as teal dots.
+          </div>
+        </details>
+      </div>
     </section>
 
     <section id="dist-section">
