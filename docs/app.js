@@ -160,10 +160,12 @@
   }
 
   // arena marker clicks: from the all-teams view, show just that team; after that each click
-  // adds or removes one team, so several can be picked (or dropped) on the map
+  // adds or removes one team, so several can be picked (or dropped) on the map. Removing the
+  // last one goes back to all teams rather than an empty map.
   function toggleTeam(abbr) {
     if (selected.size === teams.length) return solo(abbr);
     selected.has(abbr) ? selected.delete(abbr) : selected.add(abbr);
+    if (!selected.size) selected = new Set(teams.map((t) => t.abbr));
     update();
   }
 
