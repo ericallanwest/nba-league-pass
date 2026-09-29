@@ -122,6 +122,7 @@
 
   // ---- map styling from the filters ----
   const NONE_COLOR = "#2a9d8f";
+  const GRAY = dark ? "#4a4a46" : "#d2d2cc";
   const OUTLINE = dark ? "#9a9a94" : "#5f5f58"; // darker dot outline (colored dots; gray dots with 2+ teams)
   const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
   const COUNT_EXPR = {
@@ -139,8 +140,11 @@
     const hit = mode === "none"
       ? ["all", COUNT_EXPR.none, popCond]
       : ["all", [">", matches, 0], COUNT_EXPR[mode], popCond];
+    const teamColor = sel.length ? ["case", ...sel.flatMap((t) => [has(t.abbr), t.color]), "#888"] : "#888";
+    // like the Tableau viz, only single-team ZIPs take a team color; under "Any", a ZIP blacked out
+    // for two or more teams is gray (outlined) even when one of them is selected
     const color = mode === "none" ? NONE_COLOR
-      : sel.length ? ["case", ...sel.flatMap((t) => [has(t.abbr), t.color]), "#888"] : "#888";
+      : mode === "any" ? ["case", [">=", ["get", "n"], 2], GRAY, teamColor] : teamColor;
     return { hit, other: ["all", ["!", hit], popCond], color, matches };
   }
 
@@ -184,8 +188,8 @@
       const { hit, other, color, matches } = expressions();
       map.setFilter("zips-hit", hit);
       map.setPaintProperty("zips-hit", "circle-color", color);
-      // every colored dot gets the darker outline; a heavier black ring marks 2+ selected teams
-      const multi = mode === "none" ? false : [">", matches, 1];
+      // every dot gets the darker outline; under "Multiple", a heavier black ring marks 2+ selected teams
+      const multi = mode === "multiple" ? [">", matches, 1] : false;
       map.setPaintProperty("zips-hit", "circle-stroke-color", ["case", multi, dark ? "#fff" : "#000", OUTLINE]);
       // "None" shows ZIPs with no blackout, which get no outline
       map.setPaintProperty("zips-hit", "circle-stroke-width", mode === "none" ? 0 : ["interpolate", ["linear"], ["zoom"],
@@ -385,7 +389,7 @@
       paint: {
         "circle-radius": radius(0.8),
         // gray for ZIPs outside the filter; a darker outline marks ones blacked out for 2+ teams
-        "circle-color": dark ? "#4a4a46" : "#d2d2cc",
+        "circle-color": GRAY,
         "circle-stroke-color": OUTLINE,
         // thin when zoomed out, where thousands of outlined dots would turn the map dark
         "circle-stroke-width": ["interpolate", ["linear"], ["zoom"],
