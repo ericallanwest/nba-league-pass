@@ -13,7 +13,7 @@ git commit -q -m "$msg" || true
 for attempt in 1 2 3 4 5; do
   git pull -q --rebase origin "$branch" || exit 1
   python scripts/build_site_data.py
-  git add docs/data/blackouts.json
+  git add docs/data/*.json
   rebuilt=0
   git commit -q -m "Rebuild site data" && rebuilt=1
   git push -q origin "HEAD:$branch" && exit 0

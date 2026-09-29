@@ -1,0 +1,301 @@
+zip,po_name,state,zip_type,zcta,zcta_teams,nba_teams,status,same_as_zcta
+00501,Holtsville,NY,Post Office or large volume customer,11742,BKN|NYK,,http 404,
+00544,Holtsville,NY,Post Office or large volume customer,11742,BKN|NYK,,http 404,
+00604,Aguadilla,PR,Post Office or large volume customer,00603,,,http 404,
+00605,Aguadilla,PR,Post Office or large volume customer,00603,,,http 404,
+00613,Arecibo,PR,Post Office or large volume customer,00612,,,http 404,
+00614,Arecibo,PR,Post Office or large volume customer,00612,,,http 404,
+00681,Mayaguez,PR,Post Office or large volume customer,00682,,,http 404,
+00721,Palmer,PR,Post Office or large volume customer,00745,,,http 404,
+00726,Caguas,PR,Post Office or large volume customer,00725,,,http 404,
+00732,Ponce,PR,Post Office or large volume customer,00730,,,http 404,
+00733,Ponce,PR,Post Office or large volume customer,00730,,,http 404,
+00734,Ponce,PR,Post Office or large volume customer,00730,,,http 404,
+00737,Cayey,PR,Post Office or large volume customer,00736,,,http 404,
+00742,Roosevelt Roads,PR,Post Office or large volume customer,00735,,,http 404,
+00744,Rio Blanco,PR,Post Office or large volume customer,00718,,,http 404,
+00785,Guayama,PR,Post Office or large volume customer,00784,,,http 404,
+00792,Humacao,PR,Post Office or large volume customer,00791,,,http 404,
+00801,St Thomas,VI,Post Office or large volume customer,00802,,,http 404,
+00803,St Thomas,VI,Post Office or large volume customer,00802,,,http 404,
+00804,St Thomas,VI,Post Office or large volume customer,00802,,,http 404,
+00805,St Thomas,VI,Post Office or large volume customer,00802,,,http 404,
+00821,Christiansted,VI,Post Office or large volume customer,00820,,,http 404,
+00822,Christiansted,VI,Post Office or large volume customer,00820,,,http 404,
+00823,Christiansted,VI,Post Office or large volume customer,00820,,,http 404,
+00824,Christiansted,VI,Post Office or large volume customer,00820,,,http 404,
+00831,St John,VI,Post Office or large volume customer,00830,,,http 404,
+00841,Frederiksted,VI,Post Office or large volume customer,00840,,,http 404,
+00902,San Juan,PR,Post Office or large volume customer,00901,,,http 404,
+00908,San Juan,PR,Post Office or large volume customer,00907,,,http 404,
+00910,San Juan,PR,Post Office or large volume customer,00909,,,http 404,
+00914,San Juan,PR,Post Office or large volume customer,00911,,,http 404,
+00916,San Juan,PR,Post Office or large volume customer,00915,,,http 404,
+00919,San Juan,PR,Post Office or large volume customer,00918,,,http 404,
+00922,San Juan,PR,Post Office or large volume customer,00966,,,http 404,
+00928,San Juan,PR,Post Office or large volume customer,00925,,,http 404,
+00929,San Juan,PR,Post Office or large volume customer,00924,,,http 404,
+00930,San Juan,PR,Post Office or large volume customer,00923,,,http 404,
+00931,San Juan,PR,Post Office or large volume customer,00925,,,http 404,
+00933,San Juan,PR,Post Office or large volume customer,00918,,,http 404,
+00935,San Juan,PR,Post Office or large volume customer,00921,,,http 404,
+00936,San Juan,PR,Post Office or large volume customer,00918,,,http 404,
+00937,San Juan,PR,Post Office or large volume customer,00979,,,http 404,
+00939,San Juan,PR,Post Office or large volume customer,00918,,,http 404,
+00940,San Juan,PR,Post Office or large volume customer,00909,,,http 404,
+00954,Toa Alta,PR,Post Office or large volume customer,00953,,,http 404,
+00955,San Juan,PR,Post Office or large volume customer,00921,,,http 404,
+00958,Bayamon,PR,Post Office or large volume customer,00957,,,http 404,
+00963,Catano,PR,Post Office or large volume customer,00962,,,http 404,
+00970,Guaynabo,PR,Post Office or large volume customer,00969,,,http 404,
+00975,San Juan,PR,Post Office or large volume customer,00917,,,http 404,
+00977,Trujillo Alto,PR,Post Office or large volume customer,00962,,,http 404,
+00978,Saint Just,PR,Post Office or large volume customer,00976,,,http 404,
+00981,Carolina,PR,Post Office or large volume customer,00979,,,http 404,
+00984,Carolina,PR,Post Office or large volume customer,00983,,,http 404,
+00986,Carolina,PR,Post Office or large volume customer,00985,,,http 404,
+00988,Carolina,PR,Post Office or large volume customer,00983,,,http 404,
+01004,Amherst,MA,Post Office or large volume customer,01002,BOS,,ok,no
+01014,Chicopee,MA,Post Office or large volume customer,01013,BOS,,ok,no
+01021,Chicopee,MA,Post Office or large volume customer,01020,BOS,BOS,ok,yes
+01041,Holyoke,MA,Post Office or large volume customer,01040,BOS,BOS,ok,yes
+01059,North Amherst,MA,Post Office or large volume customer,01002,BOS,,http 404,
+01061,Northampton,MA,Post Office or large volume customer,01060,BOS,BOS,ok,yes
+01086,Westfield,MA,Post Office or large volume customer,01085,BOS,BOS,ok,yes
+01090,West Springfield,MA,Post Office or large volume customer,01089,BOS,BOS,ok,yes
+01101,Springfield,MA,Post Office or large volume customer,01103,BOS,BOS,ok,yes
+01102,Springfield,MA,Post Office or large volume customer,01103,BOS,BOS,ok,yes
+01111,Springfield,MA,Post Office or large volume customer,01109,BOS,BOS,ok,yes
+01115,Springfield,MA,Post Office or large volume customer,01144,BOS,BOS,ok,yes
+01116,Longmeadow,MA,Post Office or large volume customer,01106,BOS,,http 404,
+01138,Springfield,MA,Post Office or large volume customer,01108,BOS,BOS,ok,yes
+01139,Springfield,MA,Post Office or large volume customer,01109,BOS,BOS,ok,yes
+01152,Springfield,MA,Post Office or large volume customer,01151,BOS,BOS,ok,yes
+01199,Springfield,MA,Post Office or large volume customer,01107,BOS,BOS,ok,yes
+01202,Pittsfield,MA,Post Office or large volume customer,01201,BOS,BOS,ok,yes
+01203,Pittsfield,MA,Post Office or large volume customer,01201,BOS,BOS,ok,yes
+01227,Dalton,MA,Post Office or large volume customer,01226,BOS,BOS,ok,yes
+01252,North Egremont,MA,Post Office or large volume customer,01230,BOS,BOS,ok,yes
+01263,Stockbridge,MA,Post Office or large volume customer,01262,BOS,BOS,ok,yes
+01302,Greenfield,MA,Post Office or large volume customer,01301,,BOS,ok,no
+01441,Westminster,MA,Post Office or large volume customer,01473,BOS,BOS,ok,yes
+01467,Still River,MA,Post Office or large volume customer,01451,BOS,,http 404,
+01470,Groton,MA,Post Office or large volume customer,01450,BOS,,ok,no
+01471,Groton,MA,Post Office or large volume customer,01450,BOS,BOS,ok,yes
+01472,West Groton,MA,Post Office or large volume customer,01450,BOS,,ok,no
+01508,Charlton City,MA,Post Office or large volume customer,01507,BOS,,ok,no
+01509,Charlton Depot,MA,Post Office or large volume customer,01507,BOS,,ok,no
+01526,Manchaug,MA,Post Office or large volume customer,01590,BOS,,ok,no
+01538,North Uxbridge,MA,Post Office or large volume customer,01569,BOS,,http 404,
+01546,Shrewsbury,MA,Post Office or large volume customer,01545,BOS,BOS,ok,yes
+01586,West Millbury,MA,Post Office or large volume customer,01527,BOS,,http 404,
+01601,Worcester,MA,Post Office or large volume customer,01608,BOS,,ok,no
+01613,Worcester,MA,Post Office or large volume customer,01604,BOS,BOS,ok,yes
+01614,Worcester,MA,Post Office or large volume customer,01608,BOS,,http 404,
+01615,Worcester,MA,Post Office or large volume customer,01605,BOS,BOS,ok,yes
+01653,Worcester,MA,Post Office or large volume customer,01605,BOS,BOS,ok,yes
+01655,Worcester,MA,Post Office or large volume customer,01605,BOS,BOS,ok,yes
+01703,Framingham,MA,Post Office or large volume customer,01701,BOS,,http 404,
+01704,Framingham,MA,Post Office or large volume customer,01702,BOS,,http 404,
+01705,Framingham,MA,Post Office or large volume customer,01701,BOS,,http 404,
+01784,Woodville,MA,Post Office or large volume customer,01748,BOS,,http 404,
+01805,Burlington,MA,Post Office or large volume customer,01803,BOS,BOS,ok,yes
+01812,Andover,MA,Post Office or large volume customer,01810,BOS,BOS,ok,yes
+01813,Woburn,MA,Post Office or large volume customer,01801,BOS,BOS,ok,yes
+01815,Woburn,MA,Post Office or large volume customer,01801,BOS,BOS,ok,yes
+01822,Billerica,MA,Post Office or large volume customer,01821,BOS,,http 404,
+01831,Haverhill,MA,Post Office or large volume customer,01830,BOS,BOS,ok,yes
+01842,Lawrence,MA,Post Office or large volume customer,01840,BOS,BOS,ok,yes
+01853,Lowell,MA,Post Office or large volume customer,01854,BOS,BOS,ok,yes
+01865,Nutting Lake,MA,Post Office or large volume customer,01821,BOS,,ok,no
+01866,Pinehurst,MA,Post Office or large volume customer,01821,BOS,,ok,no
+01885,West Boxford,MA,Post Office or large volume customer,01921,BOS,,http 404,
+01888,Woburn,MA,Post Office or large volume customer,01801,BOS,BOS,ok,yes
+01889,North Reading,MA,Post Office or large volume customer,01864,BOS,BOS,ok,yes
+01899,Andover,MA,Post Office or large volume customer,01810,BOS,BOS,ok,yes
+01903,Lynn,MA,Post Office or large volume customer,01901,BOS,BOS,ok,yes
+01910,Lynn,MA,Post Office or large volume customer,01905,BOS,BOS,ok,yes
+01931,Gloucester,MA,Post Office or large volume customer,01930,BOS,BOS,ok,yes
+01936,Hamilton,MA,Post Office or large volume customer,01982,BOS,,ok,no
+01961,Peabody,MA,Post Office or large volume customer,01960,BOS,,ok,no
+01971,Salem,MA,Post Office or large volume customer,01970,BOS,BOS,ok,yes
+02018,Accord,MA,Post Office or large volume customer,02043,BOS,,ok,no
+02020,Brant Rock,MA,Zip Code Area,02050,BOS,,ok,no
+02027,Dedham,MA,Post Office or large volume customer,02026,BOS,BOS,ok,yes
+02040,Greenbush,MA,Post Office or large volume customer,02066,BOS,,ok,no
+02041,Green Harbor,MA,Post Office or large volume customer,02050,BOS,,ok,no
+02044,Hingham,MA,Post Office or large volume customer,02043,BOS,BOS,ok,yes
+02051,Marshfield Hills,MA,Post Office or large volume customer,02050,BOS,,http 404,
+02055,Minot,MA,Post Office or large volume customer,02066,BOS,,ok,no
+02059,North Marshfield,MA,Post Office or large volume customer,02050,BOS,,http 404,
+02060,North Scituate,MA,Post Office or large volume customer,02066,BOS,,http 404,
+02065,Ocean Bluff,MA,Post Office or large volume customer,02050,BOS,,http 404,
+02070,Sheldonville,MA,Post Office or large volume customer,02093,BOS,,http 404,
+02112,Boston,MA,Post Office or large volume customer,02111,BOS,BOS,ok,yes
+02117,Boston,MA,Post Office or large volume customer,02116,BOS,BOS,ok,yes
+02123,Boston,MA,Post Office or large volume customer,02115,BOS,BOS,ok,yes
+02137,Readville,MA,Post Office or large volume customer,02136,BOS,,ok,no
+02153,Medford,MA,Zip Code Area,02155,BOS,BOS,ok,yes
+02156,West Medford,MA,Post Office or large volume customer,02155,BOS,,http 404,
+02185,Braintree,MA,Post Office or large volume customer,02184,BOS,BOS,ok,yes
+02187,Milton Village,MA,Post Office or large volume customer,02186,BOS,,ok,no
+02196,Boston,MA,Post Office or large volume customer,02110,BOS,BOS,ok,yes
+02201,Boston,MA,Post Office or large volume customer,02108,BOS,BOS,ok,yes
+02204,Boston,MA,Post Office or large volume customer,02150,BOS,BOS,ok,yes
+02206,Boston,MA,Post Office or large volume customer,02150,BOS,BOS,ok,yes
+02211,Boston,MA,Post Office or large volume customer,02109,BOS,BOS,ok,yes
+02212,Boston,MA,Post Office or large volume customer,02109,BOS,,ok,no
+02217,Boston,MA,Post Office or large volume customer,02116,BOS,BOS,ok,yes
+02222,Boston,MA,Post Office or large volume customer,02114,BOS,BOS,ok,yes
+02238,Cambridge,MA,Post Office or large volume customer,02138,BOS,,ok,no
+02241,Boston,MA,Post Office or large volume customer,02110,BOS,,http 404,
+02269,Quincy,MA,Post Office or large volume customer,02169,BOS,BOS,ok,yes
+02283,Boston,MA,Post Office or large volume customer,02205,BOS,,http 404,
+02284,Boston,MA,Post Office or large volume customer,02205,BOS,,ok,no
+02293,Boston,MA,Post Office or large volume customer,02205,BOS,,ok,no
+02297,Boston,MA,Post Office or large volume customer,02205,BOS,,ok,no
+02298,Boston,MA,Post Office or large volume customer,02205,BOS,,http 404,
+02303,Brockton,MA,Post Office or large volume customer,02302,BOS,,ok,no
+02304,Brockton,MA,Post Office or large volume customer,02301,BOS,,http 404,
+02305,Brockton,MA,Post Office or large volume customer,02301,BOS,,ok,no
+02327,Bryantville,MA,Post Office or large volume customer,02359,BOS,,http 404,
+02331,Duxbury,MA,Post Office or large volume customer,02332,BOS,,ok,no
+02334,Easton,MA,Post Office or large volume customer,02356,BOS,,ok,no
+02337,Elmwood,MA,Post Office or large volume customer,02333,BOS,,http 404,
+02344,Middleboro,MA,Post Office or large volume customer,02346,BOS,BOS,ok,yes
+02345,Manomet,MA,Post Office or large volume customer,02360,BOS,,ok,no
+02348,Lakeville,MA,Post Office or large volume customer,02347,BOS,BOS,ok,yes
+02349,Middleboro,MA,Post Office or large volume customer,02347,BOS,BOS,ok,yes
+02355,North Carver,MA,Post Office or large volume customer,02330,BOS,,http 404,
+02358,North Pembroke,MA,Post Office or large volume customer,02359,BOS,,ok,no
+02361,Plymouth,MA,Post Office or large volume customer,02360,BOS,,http 404,
+02362,Plymouth,MA,Post Office or large volume customer,02360,BOS,,ok,no
+02381,White Horse Beach,MA,Post Office or large volume customer,02360,BOS,,ok,no
+02447,Brookline Village,MA,Post Office or large volume customer,02445,BOS,,ok,no
+02454,Waltham,MA,Post Office or large volume customer,02453,BOS,,ok,no
+02455,North Waltham,MA,Post Office or large volume customer,02452,BOS,,http 404,
+02456,New Town,MA,Post Office or large volume customer,02472,BOS,,ok,no
+02471,Watertown,MA,Post Office or large volume customer,02472,BOS,,ok,no
+02475,Arlington Heights,MA,Post Office or large volume customer,02476,BOS,,http 404,
+02477,Watertown,MA,Post Office or large volume customer,02472,BOS,,ok,no
+02479,Waverley,MA,Post Office or large volume customer,02478,BOS,,http 404,
+02495,Nonantum,MA,Post Office or large volume customer,02458,BOS,,http 404,
+02541,Falmouth,MA,Post Office or large volume customer,02540,BOS,,ok,no
+02552,Menemsha,MA,Post Office or large volume customer,02535,BOS,,http 404,
+02574,West Falmouth,MA,Post Office or large volume customer,02540,BOS,,ok,no
+02634,Centerville,MA,Post Office or large volume customer,02632,BOS,BOS,ok,yes
+02651,North Eastham,MA,Post Office or large volume customer,02642,BOS,,ok,no
+02661,South Harwich,MA,Post Office or large volume customer,02645,BOS,,ok,no
+02662,South Orleans,MA,Post Office or large volume customer,02653,BOS,,ok,no
+02669,West Chatham,MA,Post Office or large volume customer,02633,BOS,,ok,no
+02712,Chartley,MA,Post Office or large volume customer,02766,BOS,,ok,no
+02714,Dartmouth,MA,Post Office or large volume customer,02748,BOS,,ok,no
+02722,Fall River,MA,Post Office or large volume customer,02721,BOS,BOS,ok,yes
+02741,New Bedford,MA,Post Office or large volume customer,02740,BOS,BOS,ok,yes
+02742,New Bedford,MA,Post Office or large volume customer,02740,BOS,BOS,ok,yes
+02761,North Attleboro,MA,Post Office or large volume customer,02760,BOS,BOS,ok,yes
+02768,Raynham Center,MA,Post Office or large volume customer,02767,BOS,,http 404,
+02801,Adamsville,RI,Post Office or large volume customer,02837,BOS,,ok,no
+02862,Pawtucket,RI,Post Office or large volume customer,02860,BOS,BOS,ok,yes
+02877,Slocum,RI,Zip Code Area,02874,BOS,BOS,ok,yes
+02880,Wakefield,RI,Post Office or large volume customer,02879,BOS,,ok,no
+02883,Peace Dale,RI,Post Office or large volume customer,02879,BOS,,ok,no
+02887,Warwick,RI,Post Office or large volume customer,02886,BOS,BOS,ok,yes
+02901,Providence,RI,Post Office or large volume customer,02903,BOS,BOS,ok,yes
+02902,Providence,RI,Post Office or large volume customer,02903,BOS,BOS,ok,yes
+02940,Providence,RI,Post Office or large volume customer,02904,BOS,BOS,ok,yes
+03040,East Candia,NH,Post Office or large volume customer,03034,BOS,,http 404,
+03041,East Derry,NH,Post Office or large volume customer,03038,BOS,,http 404,
+03061,Nashua,NH,Post Office or large volume customer,03060,BOS,BOS,ok,yes
+03073,North Salem,NH,Post Office or large volume customer,03079,BOS,,ok,no
+03105,Manchester,NH,Post Office or large volume customer,03101,BOS,BOS,ok,yes
+03108,Manchester,NH,Post Office or large volume customer,03103,BOS,BOS,ok,yes
+03111,Manchester,NH,Post Office or large volume customer,03103,BOS,BOS,ok,yes
+03247,Laconia,NH,Post Office or large volume customer,03246,,BOS,ok,no
+03252,Lochmere,NH,Post Office or large volume customer,03276,BOS,BOS,ok,yes
+03272,South Newbury,NH,Post Office or large volume customer,03255,,,http 404,
+03289,Winnisquam,NH,Post Office or large volume customer,03220,,BOS,ok,no
+03298,Tilton,NH,Post Office or large volume customer,03253,BOS,,http 404,
+03299,Tilton,NH,Post Office or large volume customer,03253,BOS,,http 404,
+03302,Concord,NH,Post Office or large volume customer,03301,BOS,BOS,ok,yes
+03305,Concord,NH,Post Office or large volume customer,03301,BOS,BOS,ok,yes
+03435,Keene,NH,Post Office or large volume customer,03431,BOS,,ok,no
+03468,West Peterborough,NH,Post Office or large volume customer,03458,BOS,,http 404,
+03469,West Swanzey,NH,Post Office or large volume customer,03446,BOS,,ok,no
+03589,Mount Washington,NH,Post Office or large volume customer,03593,,BOS,ok,no
+03746,Cornish Flat,NH,Post Office or large volume customer,03745,BOS,BOS,ok,yes
+03749,Enfield Center,NH,Post Office or large volume customer,03748,BOS,BOS,ok,yes
+03754,Guild,NH,Post Office or large volume customer,03773,BOS,BOS,ok,yes
+03756,Lebanon,NH,Zip Code Area,03766,BOS,BOS,ok,yes
+03769,Lyme Center,NH,Post Office or large volume customer,03768,BOS,BOS,ok,yes
+03802,Portsmouth,NH,Post Office or large volume customer,03801,BOS,BOS,ok,yes
+03803,Portsmouth,NH,Post Office or large volume customer,03801,BOS,BOS,ok,yes
+03804,Portsmouth,ME,Post Office or large volume customer,03904,BOS,BOS,ok,yes
+03815,Center Strafford,NH,Post Office or large volume customer,03884,BOS,BOS,ok,yes
+03821,Dover,NH,Post Office or large volume customer,03820,BOS,BOS,ok,yes
+03822,Dover,NH,Post Office or large volume customer,03820,BOS,BOS,ok,yes
+03843,Hampton,NH,Post Office or large volume customer,03842,BOS,,ok,no
+03859,Newton Junction,NH,Post Office or large volume customer,03858,BOS,,http 404,
+03866,Rochester,NH,Post Office or large volume customer,03867,BOS,,ok,no
+03896,Wolfeboro Falls,NH,Post Office or large volume customer,03894,BOS,BOS,ok,yes
+04004,Bar Mills,ME,Post Office or large volume customer,04093,BOS,BOS,ok,yes
+04007,Biddeford,ME,Post Office or large volume customer,04005,BOS,BOS,ok,yes
+04013,Bustins Island,ME,Zip Code Area,04032,BOS,BOS,ok,yes
+04014,Cape Porpoise,ME,Post Office or large volume customer,04046,,BOS,ok,no
+04016,Center Lovell,ME,Post Office or large volume customer,04051,BOS,BOS,ok,yes
+04028,East Parsonsfield,ME,Post Office or large volume customer,04047,BOS,BOS,ok,yes
+04033,Freeport,ME,Post Office or large volume customer,04032,BOS,BOS,ok,yes
+04034,Freeport,ME,Post Office or large volume customer,04032,BOS,,http 404,
+04054,Moody,ME,Post Office or large volume customer,04090,BOS,,http 404,
+04070,Scarborough,ME,Post Office or large volume customer,04074,BOS,BOS,ok,yes
+04077,South Casco,ME,Post Office or large volume customer,04015,BOS,BOS,ok,yes
+04078,South Freeport,ME,Post Office or large volume customer,04032,BOS,BOS,ok,yes
+04082,South Windham,ME,Post Office or large volume customer,04062,BOS,BOS,ok,yes
+04094,West Kennebunk,ME,Post Office or large volume customer,04043,BOS,,http 404,
+04098,Westbrook,ME,Post Office or large volume customer,04092,BOS,BOS,ok,yes
+04104,Portland,ME,Post Office or large volume customer,04101,BOS,BOS,ok,yes
+04112,Portland,ME,Post Office or large volume customer,04101,BOS,BOS,ok,yes
+04116,South Portland,ME,Post Office or large volume customer,04106,BOS,BOS,ok,yes
+04122,Portland,ME,Post Office or large volume customer,04102,BOS,BOS,ok,yes
+04123,Portland,ME,Post Office or large volume customer,04102,BOS,BOS,ok,yes
+04124,Portland,ME,Post Office or large volume customer,04102,BOS,BOS,ok,yes
+04211,Auburn,ME,Post Office or large volume customer,04210,BOS,BOS,ok,yes
+04212,Auburn,ME,Post Office or large volume customer,04210,BOS,BOS,ok,yes
+04223,Danville,ME,Post Office or large volume customer,04210,BOS,BOS,ok,yes
+04225,Dryden,ME,Post Office or large volume customer,04294,BOS,BOS,ok,yes
+04228,East Livermore,ME,Post Office or large volume customer,04254,BOS,BOS,ok,yes
+04230,East Poland,ME,Post Office or large volume customer,04274,BOS,BOS,ok,yes
+04241,Lewiston,ME,Post Office or large volume customer,04240,BOS,BOS,ok,yes
+04243,Lewiston,ME,Post Office or large volume customer,04240,BOS,BOS,ok,yes
+04262,North Jay,ME,Post Office or large volume customer,04239,BOS,BOS,ok,yes
+04266,North Turner,ME,Post Office or large volume customer,04282,BOS,BOS,ok,yes
+04288,West Minot,ME,Post Office or large volume customer,04258,BOS,BOS,ok,yes
+04291,West Poland,ME,Post Office or large volume customer,04274,BOS,BOS,ok,yes
+04332,Augusta,ME,Post Office or large volume customer,04330,BOS,BOS,ok,yes
+04333,Augusta,ME,Post Office or large volume customer,04330,BOS,,ok,no
+04336,Augusta,ME,Post Office or large volume customer,04330,BOS,BOS,ok,yes
+04338,Augusta,ME,Post Office or large volume customer,04330,BOS,BOS,ok,yes
+04343,East Winthrop,ME,Post Office or large volume customer,04364,BOS,BOS,ok,yes
+04402,Bangor,ME,Post Office or large volume customer,04401,BOS,BOS,ok,yes
+04420,Castine,ME,Post Office or large volume customer,04421,BOS,BOS,ok,yes
+04549,Isle of Springs,ME,Zip Code Area,04575,BOS,BOS,ok,yes
+04565,Sebasco Estates,ME,Post Office or large volume customer,04562,BOS,BOS,ok,yes
+04629,East Blue Hill,ME,Post Office or large volume customer,04614,BOS,BOS,ok,yes
+04637,Grand Lake Stream,ME,Post Office or large volume customer,04668,BOS,BOS,ok,yes
+04644,Hulls Cove,ME,Post Office or large volume customer,04609,BOS,BOS,ok,yes
+04672,Salsbury Cove,ME,Post Office or large volume customer,04609,BOS,BOS,ok,yes
+04738,Crouseville,ME,Post Office or large volume customer,04786,BOS,BOS,ok,yes
+04741,Estcourt Station,ME,Zip Code Area,04774,BOS,BOS,ok,yes
+04744,Fort Kent Mills,ME,Post Office or large volume customer,04743,BOS,BOS,ok,yes
+04751,Limestone,ME,Zip Code Area,04750,BOS,BOS,ok,yes
+04775,Sheridan,ME,Post Office or large volume customer,04732,BOS,BOS,ok,yes
+04850,Lincolnville Center,ME,Post Office or large volume customer,04849,BOS,BOS,ok,yes
+04865,West Rockport,ME,Post Office or large volume customer,04856,BOS,BOS,ok,yes
+04903,Waterville,ME,Post Office or large volume customer,04901,BOS,BOS,ok,yes
+04933,East Newport,ME,Post Office or large volume customer,04953,BOS,BOS,ok,yes
+04935,East Vassalboro,ME,Post Office or large volume customer,04989,BOS,BOS,ok,yes
+04954,New Portland,ME,Post Office or large volume customer,04961,BOS,BOS,ok,yes
+04962,North Vassalboro,ME,Post Office or large volume customer,04926,BOS,BOS,ok,yes
+04972,Sandy Point,ME,Post Office or large volume customer,04981,BOS,BOS,ok,yes
+05047,Hartford,VT,Post Office or large volume customer,05001,BOS,BOS,ok,yes
+05049,Hartland Four Corners,VT,Post Office or large volume customer,05048,BOS,BOS,ok,yes

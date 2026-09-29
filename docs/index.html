@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NBA League Pass Blackout Map</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
   <meta name="description" content="Which NBA teams are locally blacked out on NBA League Pass in every US ZIP code. Filter by team or search a ZIP.">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
@@ -71,6 +72,7 @@
         <li>Colored dots have a dark gray outline; a heavier black ring marks a ZIP blacked out for two or more of the selected teams. <em>One</em> and <em>Multiple</em> count all of a ZIP's blacked-out teams, not just the selected ones; <em>None</em> shows ZIPs with no local blackout.</li>
         <li>Rings show a 75-mile radius around each selected team's arena, for comparison with its blackout area.</li>
         <li>Gray dots are ZIPs outside the current filter. A darker outline means two or more teams are blacked out there; no outline means one team or none.</li>
+        <li>About 7,000 USPS ZIP codes aren't Census ZIP areas: PO-box sections, single organizations (a university, a company, a federal agency) and ZIPs created after the 2020 Census. They aren't drawn, but the ZIP search finds them and shows NBA.com's blackouts for each, at the Census ZIP area they sit in. Sources: <a href="https://data.hrsa.gov/DataDownload/GeoCareNavigator/ZIP%20Code%20to%20ZCTA%20Crosswalk.xlsx">HRSA ZIP Code to ZCTA Crosswalk</a>; USPS names via the <a href="https://pypi.org/project/zipcodes/">zipcodes</a> package.</li>
         <li>Alaska, Puerto Rico and the other U.S. territories aren't shown. None of their ZIPs is blacked out: NBA.com lists no local teams for any Alaska ZIP and doesn't recognize ZIPs in Puerto Rico or the territories. A handful of ZIPs elsewhere that NBA.com doesn't recognize show as gray with no outline.</li>
         <li>Nationally televised games have their own blackouts, which this map doesn't cover.</li>
         <li>Data last built <span id="updated">—</span>. Code and data: <a href="https://github.com/ericallanwest/nba-league-pass">github.com/ericallanwest/nba-league-pass</a>.</li>
