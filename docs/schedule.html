@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>League Pass National Blackouts</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
+  <meta name="description" content="How many of each NBA team's 82 games an out-of-market fan can watch live on League Pass, after national TV blackouts on ESPN, ABC, NBC, Peacock and Prime Video.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="schedule.css">
+  <script>
+    try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body class="page">
+  <main>
+    <p class="back"><a href="./">← Blackout map</a></p>
+    <h1>League Pass national blackouts</h1>
+    <p class="lede">
+      League Pass doesn't show live games on ESPN, ABC, NBC, Peacock or Prime Video anywhere in the US.
+      So even outside a team's local blackout area, how many of its 82 games you can watch live depends on how
+      often it plays on national TV. NBA TV games stay on League Pass.
+    </p>
+
+    <div class="controls">
+      <div class="segmented" id="sort" role="radiogroup" aria-label="Sort teams">
+        <label><input type="radio" name="sort" value="national" checked><span>Most blackouts</span></label>
+        <label><input type="radio" name="sort" value="fewest"><span>Fewest blackouts</span></label>
+        <label><input type="radio" name="sort" value="team"><span>Team</span></label>
+      </div>
+    </div>
+
+    <ul class="legend" id="legend"></ul>
+
+    <div class="chart" id="chart" role="table" aria-label="Games per team by where they can be watched live">
+      <div class="chart-head" role="row">
+        <span role="columnheader">Team</span>
+        <span role="columnheader">82 games</span>
+        <span role="columnheader" class="num"><span class="head-long">Live on League Pass</span><span class="head-short">Live</span></span>
+      </div>
+    </div>
+    <p id="league" class="muted"></p>
+
+    <details id="notes">
+      <summary>Notes &amp; sources</summary>
+      <ul>
+        <li>Schedule and national broadcasters from NBA.com's league schedule feed, refreshed weekly.</li>
+        <li>Blackout networks per the <a href="https://www.nba.com/league-pass-purchase">League Pass purchase page</a>: ESPN, ABC, NBC, Peacock and Amazon Prime Video. NBC games also stream on Peacock; the Peacock segment is games on Peacock and NBC Sports Network without NBC.</li>
+        <li>Counts are for a viewer outside the team's local blackout area. Inside it, every game is blacked out on League Pass.</li>
+        <li>Each team's last two games depend on the NBA Cup group stage and are added once the league schedules them in December.</li>
+      </ul>
+    </details>
+  </main>
+  <div id="tip" role="tooltip" hidden></div>
+  <script src="schedule.js"></script>
+</body>
+</html>
