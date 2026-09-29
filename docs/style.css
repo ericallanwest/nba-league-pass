@@ -123,6 +123,22 @@ section > h2:first-child { margin-top: 0; }
 }
 #teams li:hover .only, #teams .only:focus { visibility: visible; }
 .toggle { display: flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
+.toggle-row { display: flex; align-items: center; gap: 6px; position: relative; }
+.info summary {
+  list-style: none; cursor: pointer; width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid var(--muted); color: var(--muted);
+  font: italic 700 11px/14px Georgia, serif; text-align: center; user-select: none;
+}
+.info summary::-webkit-details-marker { display: none; }
+.info summary:hover, .info[open] summary { border-color: var(--accent); color: var(--accent); }
+.info summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* popover under the row, over the toggles below it */
+.info-body {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 2;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15); padding: 8px 10px; font-size: 13px; color: var(--text);
+}
+.info-body a { color: var(--accent); }
 
 #notes { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
 #notes summary { cursor: pointer; font-weight: 600; }

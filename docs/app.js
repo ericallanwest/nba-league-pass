@@ -445,6 +445,11 @@
     return ctx.getImageData(0, 0, size, size);
   }
 
+  // info popovers close on a click anywhere else
+  document.addEventListener("click", (e) => {
+    for (const d of document.querySelectorAll("details.info[open]")) if (!d.contains(e.target)) d.open = false;
+  });
+
   // ---- theme switch ----
   function setupTheme() {
     const OURS = new Set(["zips", "rings"]);

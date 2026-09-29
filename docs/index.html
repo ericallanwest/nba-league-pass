@@ -61,7 +61,17 @@
     </section>
 
     <section class="toggles">
-      <label class="toggle"><input type="checkbox" id="rings" checked> 75-mile radius around arenas</label>
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="rings" checked> 75-mile radius around arenas</label>
+        <details class="info">
+          <summary aria-label="About the 75-mile radius" title="About the 75-mile radius">i</summary>
+          <div class="info-body">
+            The NBA's team territory rules use a 75-mile radius around each arena:
+            <a href="https://www.sportsbusinessjournal.com/Journal/Issues/2016/02/22/Leagues-and-Governing-Bodies/NBA-territory/" target="_blank" rel="noopener">Sports Business Journal</a>,
+            <a href="https://www.ibj.com/the-score-anthony-schoettle/57476-nba-rule-change-quadruples-pacers-advertising-reach" target="_blank" rel="noopener">Indianapolis Business Journal</a>.
+          </div>
+        </details>
+      </div>
       <label class="toggle"><input type="checkbox" id="size-pop" checked> Size ZIPs by population</label>
       <label class="toggle"><input type="checkbox" id="show-other"> Show ZIPs outside the filter</label>
     </section>
