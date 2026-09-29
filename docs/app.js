@@ -174,6 +174,7 @@
   const GRAY = () => (dark ? "#4a4a46" : "#d2d2cc");
   const OUTLINE = () => (dark ? "#9a9a94" : "#5f5f58"); // darker outline on blacked-out dots
   const RING = () => (dark ? "#f0f0ec" : "#1c1c1c");
+  const STATE_LINE = () => (dark ? "#8a8a85" : "#8f8f88"); // stronger than the basemap's faint borders
   const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
   const COUNT_EXPR = {
     any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
@@ -243,6 +244,7 @@
       map.setPaintProperty("zips-hit", "circle-stroke-width", ["interpolate", ["linear"], ["zoom"], 3, 0.25, 7, 0.9]);
       map.setPaintProperty("zips-other", "circle-color", GRAY());
       map.setPaintProperty("rings", "line-color", RING());
+      map.setPaintProperty("states", "line-color", STATE_LINE());
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
       map.setFilter("zips-pie", mode === "none" ? false : ["all", hit, [">=", ["get", "n"], 2]]);
       map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
@@ -464,7 +466,7 @@
 
   // ---- theme switch ----
   function setupTheme() {
-    const OURS = new Set(["zips", "rings"]);
+    const OURS = new Set(["states", "zips", "rings"]);
     function apply() {
       if (theme === "auto") delete document.documentElement.dataset.theme;
       else document.documentElement.dataset.theme = theme;
@@ -494,6 +496,17 @@
 
   // ---- layers ----
   mapLoaded.then(() => {
+    // lower-48 state lines (Census TIGER/Line 2025, simplified; scripts/build_states.sh), under the dots
+    map.addSource("states", { type: "geojson", data: "data/states.json" });
+    map.addLayer({
+      id: "states",
+      type: "line",
+      source: "states",
+      paint: {
+        "line-color": STATE_LINE(),
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 6, 1.1, 10, 1.6],
+      },
+    });
     map.addSource("zips", { type: "geojson", data: { type: "FeatureCollection", features } });
     map.addLayer({
       id: "zips-other",
