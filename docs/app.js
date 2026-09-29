@@ -159,23 +159,15 @@
     li.querySelector(".only").addEventListener("click", () => solo(t.abbr));
     list.appendChild(li);
   }
-  // last row: ZIPs with no data from NBA.com
+  // "Show ZIPs with no data" toggle, with their numbers in its info popover
   {
     let n = 0, pop = 0;
-    for (const z of byZip.values()) if (z.idxs && !z.idxs.length || z.idxs === null) { n++; pop += z.pop || 0; }
-    const li = document.createElement("li");
-    li.className = "no-data";
-    li.innerHTML = `
-      <label>
-        <input type="checkbox" id="no-data">
-        <span class="swatch" style="background:${NONE_COLOR}"></span>
-        <span class="name">Show ZIPs with no data</span>
-      </label>
-      <span class="count" title="${pop.toLocaleString()} people in ${n.toLocaleString()} ZIP codes NBA.com lists no local teams for">${compact(pop)}</span>`;
-    const cb = li.querySelector("input");
+    for (const z of byZip.values()) if (!z.idxs || !z.idxs.length) { n++; pop += z.pop || 0; }
+    document.getElementById("no-data-count").textContent = `${n.toLocaleString()} ZIPs (${pop.toLocaleString()} people)`;
+    document.querySelector("#no-data-row .swatch").style.background = NONE_COLOR;
+    const cb = document.getElementById("no-data");
     cb.checked = noData;
     cb.addEventListener("change", () => { noData = cb.checked; update(); });
-    list.appendChild(li);
   }
   document.getElementById("all").onclick = () => { selected = new Set(teams.map((t) => t.abbr)); update(); };
   document.getElementById("none").onclick = () => { selected = new Set(); update(); };
