@@ -8,12 +8,15 @@
   <meta name="description" content="Which NBA teams are locally blacked out on NBA League Pass in every US ZIP code. Filter by team or search a ZIP.">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // apply a saved Light/Dark choice before first paint; "auto" follows the system setting
+    try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
 </head>
 <body>
   <aside id="panel">
     <header>
       <h1>NBA League Pass Blackout Map</h1>
-      <p class="sub">Where each team's games are blacked out on League Pass because a local broadcaster holds the rights.</p>
     </header>
 
     <form id="search" autocomplete="off">
@@ -57,9 +60,28 @@
     </section>
 
     <section class="toggles">
-      <label class="toggle"><input type="checkbox" id="rings" checked> 75-mile radius around arenas</label>
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="rings" checked> 75-mile radius around arenas</label>
+        <details class="info">
+          <summary aria-label="About the 75-mile radius" title="About the 75-mile radius">i</summary>
+          <div class="info-body">
+            The NBA's team territory rules use a 75-mile radius around each arena:
+            <a href="https://www.sportsbusinessjournal.com/Journal/Issues/2016/02/22/Leagues-and-Governing-Bodies/NBA-territory/" target="_blank" rel="noopener">Sports Business Journal</a>,
+            <a href="https://www.ibj.com/the-score-anthony-schoettle/57476-nba-rule-change-quadruples-pacers-advertising-reach" target="_blank" rel="noopener">Indianapolis Business Journal</a>.
+          </div>
+        </details>
+      </div>
       <label class="toggle"><input type="checkbox" id="size-pop" checked> Size ZIPs by population</label>
       <label class="toggle"><input type="checkbox" id="show-other"> Show ZIPs outside the filter</label>
+    </section>
+
+    <section>
+      <h2>Theme</h2>
+      <div id="theme" class="segmented" role="radiogroup" aria-label="Color theme">
+        <label><input type="radio" name="theme" value="auto" checked><span>Auto</span></label>
+        <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+        <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+      </div>
     </section>
 
     <details id="notes">
@@ -70,7 +92,7 @@
         <li>Town and state are the USPS city name for each ZIP (via the <a href="https://pypi.org/project/zipcodes/">zipcodes</a> package). Population is from the Census Bureau's American Community Survey<span id="pop-source"></span>.</li>
         <li>Closest teams are ranked by typical drive time without traffic, from <a href="https://openrouteservice.org">openrouteservice</a> (© OpenStreetMap contributors), from each ZIP's center point to the arena. Miles are driving distance by the same route. Until a ZIP's drive times are computed, and for ZIPs with no road route to an arena (Hawaii), the list shows the nearest arenas in a straight line, labeled as such.</li>
         <li>A team color marks a ZIP blacked out for that team alone. A ZIP blacked out for two or more teams (including a selected one) is a pie with an equal slice for each of them, turned so each team's slice faces its arena, in every team's color whether or not it's selected. <em>One</em> and <em>Multiple</em> count all of a ZIP's blacked-out teams, not just the selected ones; <em>None</em> shows ZIPs with no local blackout.</li>
-        <li>Rings show a 75-mile radius around each selected team's arena, for comparison with its blackout area.</li>
+        <li>Rings show a 75-mile radius around each selected team's arena (every arena when no team is selected, or under <em>None</em>), for comparison with its blackout area.</li>
         <li><em>Show ZIPs outside the filter</em> adds every other ZIP as a plain gray dot.</li>
         <li>About 7,000 USPS ZIP codes aren't Census ZIP areas: PO-box sections, single organizations (a university, a company, a federal agency) and ZIPs created after the 2020 Census. They aren't drawn, but the ZIP search finds them and shows NBA.com's blackouts for each, at the Census ZIP area they sit in. Sources: <a href="https://data.hrsa.gov/DataDownload/GeoCareNavigator/ZIP%20Code%20to%20ZCTA%20Crosswalk.xlsx">HRSA ZIP Code to ZCTA Crosswalk</a>; USPS names via the <a href="https://pypi.org/project/zipcodes/">zipcodes</a> package.</li>
         <li>Alaska, Puerto Rico and the other U.S. territories aren't shown. None of their ZIPs is blacked out: NBA.com lists no local teams for any Alaska ZIP and doesn't recognize ZIPs in Puerto Rico or the territories. A handful of ZIPs elsewhere that NBA.com doesn't recognize are shown only with <em>Show ZIPs outside the filter</em>, as gray dots.</li>

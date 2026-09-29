@@ -1,9 +1,16 @@
 // NBA League Pass blackout map. Data: data/blackouts.json, built by scripts/build_site_data.py.
 (async function () {
-  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  // theme: "auto" follows the system setting; Light/Dark are saved per browser
+  const systemDark = matchMedia("(prefers-color-scheme: dark)");
+  let theme = "auto";
+  try { theme = localStorage.getItem("theme") || "auto"; } catch (e) {}
+  if (!["auto", "light", "dark"].includes(theme)) theme = "auto";
+  const isDark = () => (theme === "auto" ? systemDark.matches : theme === "dark");
+  let dark = isDark();
+  const basemap = () => `https://basemaps.cartocdn.com/gl/${dark ? "dark-matter" : "positron"}-gl-style/style.json`;
   const map = new maplibregl.Map({
     container: "map",
-    style: `https://basemaps.cartocdn.com/gl/${dark ? "dark-matter" : "positron"}-gl-style/style.json`,
+    style: basemap(),
     bounds: [[-125, 24], [-66.5, 49.5]],
     fitBoundsOptions: { padding: 20 },
     attributionControl: { compact: true },
@@ -22,7 +29,15 @@
   // rotation is the circular mean of how far each slice would have to turn to face its arena.
   // Bearings are on the Web Mercator map, so they match what's on screen. Returns the slice order
   // (pk, clockwise from the top of the unrotated image) and the rotation in degrees (r).
+  // arena pairs so close that bearings to them swing wildly between neighboring ZIPs: split these
+  // two-team pies straight north/south instead, with the northern arena's team on top
+  const NORTH_SOUTH = { "BKN,NYK": "NYK", "LAC,LAL": "LAL" };
   function pie(lat, lon, idxs) {
+    const key = idxs.map((i) => teams[i].abbr).sort().join(",");
+    if (NORTH_SOUTH[key]) {
+      // slice 0 (the first team in pk) sits at the top before rotation; turning 180° puts it at the bottom
+      return { pk: key, r: key.startsWith(NORTH_SOUTH[key]) ? 0 : 180 };
+    }
     const merc = (la) => Math.log(Math.tan(Math.PI / 4 + (la * Math.PI) / 360));
     const y0 = merc(lat);
     const byBearing = idxs.map((i) => {
@@ -143,10 +158,19 @@
     update();
   }
 
+  // arena marker clicks: from the all-teams view, show just that team; after that each click
+  // adds or removes one team, so several can be picked (or dropped) on the map
+  function toggleTeam(abbr) {
+    if (selected.size === teams.length) return solo(abbr);
+    selected.has(abbr) ? selected.delete(abbr) : selected.add(abbr);
+    update();
+  }
+
   // ---- map styling from the filters ----
   const NONE_COLOR = "#2a9d8f";
-  const GRAY = dark ? "#4a4a46" : "#d2d2cc";
-  const OUTLINE = dark ? "#9a9a94" : "#5f5f58"; // darker outline on blacked-out dots
+  const GRAY = () => (dark ? "#4a4a46" : "#d2d2cc");
+  const OUTLINE = () => (dark ? "#9a9a94" : "#5f5f58"); // darker outline on blacked-out dots
+  const RING = () => (dark ? "#f0f0ec" : "#1c1c1c");
   const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
   const COUNT_EXPR = {
     any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
@@ -211,19 +235,21 @@
       const { hit, other, color } = expressions();
       map.setFilter("zips-hit", hit);
       map.setPaintProperty("zips-hit", "circle-color", color);
-      // every blacked-out dot gets the darker outline
-      map.setPaintProperty("zips-hit", "circle-stroke-color", OUTLINE);
-      // "None" shows ZIPs with no blackout, which get no outline
-      map.setPaintProperty("zips-hit", "circle-stroke-width", mode === "none" ? 0 : ["interpolate", ["linear"], ["zoom"],
-        3, 0.25, 7, 0.9]);
+      // every dot in the filter gets the darker outline
+      map.setPaintProperty("zips-hit", "circle-stroke-color", OUTLINE());
+      map.setPaintProperty("zips-hit", "circle-stroke-width", ["interpolate", ["linear"], ["zoom"], 3, 0.25, 7, 0.9]);
+      map.setPaintProperty("zips-other", "circle-color", GRAY());
+      map.setPaintProperty("rings", "line-color", RING());
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
       map.setFilter("zips-pie", mode === "none" ? false : ["all", hit, [">=", ["get", "n"], 2]]);
       map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
       map.setFilter("zips-other", other);
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
       map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
-      map.setFilter("rings", ["in", ["get", "abbr"], ["literal", [...selected]]]);
-      map.setLayoutProperty("rings", "visibility", rings.checked && mode !== "none" ? "visible" : "none");
+      // rings for the selected teams; every arena's when there's no selection to follow (no teams, or "None")
+      const ringTeams = mode === "none" || !selected.size ? teams.map((t) => t.abbr) : [...selected];
+      map.setFilter("rings", ["in", ["get", "abbr"], ["literal", ringTeams]]);
+      map.setLayoutProperty("rings", "visibility", rings.checked ? "visible" : "none");
     }
     for (const [abbr, el] of markers) el.style.opacity = mode === "none" || selected.has(abbr) ? 1 : 0.35;
 
@@ -257,8 +283,8 @@
     el.className = "arena";
     el.style.background = t.color;
     el.textContent = t.abbr;
-    el.title = `${t.city} ${t.name} — ${t.arena}. Click to show only this team.`;
-    el.addEventListener("click", (e) => { e.stopPropagation(); solo(t.abbr); });
+    el.title = `${t.city} ${t.name} — ${t.arena}. Click to add or remove this team.`;
+    el.addEventListener("click", (e) => { e.stopPropagation(); toggleTeam(t.abbr); });
     markers.set(t.abbr, el);
     new maplibregl.Marker({ element: el }).setLngLat([t.lon, t.lat]).addTo(map);
   });
@@ -301,21 +327,25 @@
       : z.idxs.length ? z.idxs.map((i) => teams[i].name).join("/")
       : "None";
     const crow = (t) => Math.round(miles(z.lat, z.lon, t.lat, t.lon)).toLocaleString();
+    // teams blacked out here keep the dark text; the rest are in the lighter label color
+    // (all dark when there's no blackout data to go by)
+    const out = (i) => Array.isArray(z.idxs) && !z.idxs.includes(i);
+    const line = (i, text) => `<div${out(i) ? ' class="label"' : ""}>${text}</div>`;
     let closest, heading = "Closest Teams";
     if (z.drives && z.drives.length) {
       // miles by road when the data has them; older rows only have drive time
-      closest = z.drives.map(([i, m, mi]) => `<div>${teams[i].name}: ${duration(m)} <span class="label">(${
-        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})</span></div>`);
+      closest = z.drives.map(([i, m, mi]) => line(i, `${teams[i].name}: ${duration(m)} <span class="label">(${
+        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})</span>`));
     } else {
       heading += ' <span class="label">(straight line)</span>';
       closest = teams
-        .map((t) => ({ t, d: miles(z.lat, z.lon, t.lat, t.lon) }))
+        .map((t, i) => ({ t, i, d: miles(z.lat, z.lon, t.lat, t.lon) }))
         .sort((a, b) => a.d - b.d)
         .slice(0, 5)
-        .map(({ t }) => `<div>${t.name}: ${crow(t)} Miles</div>`);
+        .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} Miles`));
     }
     return `<div class="title">${title}</div>` + note +
-      (z.noPop ? "" : row("Population", z.pop != null ? z.pop.toLocaleString() : "—")) +
+      (z.noPop ? "" : row("ZIP Population", z.pop != null ? z.pop.toLocaleString() : "—")) +
       row("Blackout Team(s)", blackout) +
       `<div class="title closest">${heading}</div>${closest.join("")}`;
   }
@@ -423,6 +453,41 @@
     return ctx.getImageData(0, 0, size, size);
   }
 
+  // info popovers close on a click anywhere else
+  document.addEventListener("click", (e) => {
+    for (const d of document.querySelectorAll("details.info[open]")) if (!d.contains(e.target)) d.open = false;
+  });
+
+  // ---- theme switch ----
+  function setupTheme() {
+    const OURS = new Set(["zips", "rings"]);
+    function apply() {
+      if (theme === "auto") delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = theme;
+      if (isDark() === dark) return;
+      dark = isDark();
+      // swap the basemap, carrying our sources and layers over to the new style
+      map.setStyle(basemap(), {
+        diff: false, // a full reload, so "style.load" fires and update() can restyle for the theme
+        transformStyle: (prev, next) => ({
+          ...next,
+          sources: { ...next.sources, ...Object.fromEntries(Object.entries(prev.sources).filter(([id]) => OURS.has(id))) },
+          layers: [...next.layers, ...prev.layers.filter((l) => OURS.has(l.source))],
+        }),
+      });
+      map.once("style.load", update);
+    }
+    for (const r of document.querySelectorAll("#theme input")) {
+      r.checked = r.value === theme;
+      r.onchange = () => {
+        theme = r.value;
+        try { theme === "auto" ? localStorage.removeItem("theme") : localStorage.setItem("theme", theme); } catch (e) {}
+        apply();
+      };
+    }
+    systemDark.addEventListener("change", () => theme === "auto" && apply());
+  }
+
   // ---- layers ----
   mapLoaded.then(() => {
     map.addSource("zips", { type: "geojson", data: { type: "FeatureCollection", features } });
@@ -433,7 +498,7 @@
       paint: {
         "circle-radius": radius(0.8),
         // ZIPs outside the filter: plain gray, no outline
-        "circle-color": GRAY,
+        "circle-color": GRAY(),
         "circle-opacity": 0.85,
       },
     });
@@ -471,7 +536,7 @@
       type: "line",
       source: "rings",
       // neutral like the Tableau viz; a team-colored ring disappears into that team's dots
-      paint: { "line-color": dark ? "#f0f0ec" : "#1c1c1c", "line-width": 1.6, "line-opacity": 0.9 },
+      paint: { "line-color": RING(), "line-width": 1.6, "line-opacity": 0.9 },
     });
     for (const layer of ["zips-hit", "zips-other"]) {
       map.on("click", layer, (e) => showZip(e.features[0].properties.z));
@@ -479,6 +544,7 @@
       map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
     }
     update();
+    setupTheme();
     const zip = params.get("zip");
     if (zip && /^\d{5}$/.test(zip)) {
       document.getElementById("zip").value = zip;
