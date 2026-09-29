@@ -325,7 +325,7 @@
         .map(({ t }) => `<div>${t.name}: ${crow(t)} Miles</div>`);
     }
     return `<div class="title">${title}</div>` + note +
-      (z.noPop ? "" : row("Population", z.pop != null ? z.pop.toLocaleString() : "—")) +
+      (z.noPop ? "" : row("ZIP Population", z.pop != null ? z.pop.toLocaleString() : "—")) +
       row("Blackout Team(s)", blackout) +
       `<div class="title closest">${heading}</div>${closest.join("")}`;
   }
