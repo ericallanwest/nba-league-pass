@@ -167,3 +167,5 @@ section > h2:first-child { margin-top: 0; }
   #map { height: auto; min-height: 55vh; }
   #teams .only { visibility: visible; }
 }
+
+.home-btn { display: flex; align-items: center; justify-content: center; color: #333; }
