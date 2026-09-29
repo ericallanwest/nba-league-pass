@@ -368,6 +368,18 @@
   const duration = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} hr ${m % 60} min`);
   const row = (label, value) => `<div><span class="label">${label}:</span> ${value}</div>`;
 
+  // each team's games live on League Pass outside its local blackout area: those not on
+  // ESPN, ABC, NBC, Peacock or Prime Video (NBA TV games count), from the schedule page's data
+  let live = null;
+  fetch("data/schedule.json").then((r) => r.json()).then((s) => {
+    live = Object.fromEntries(teams.map((t) => [t.abbr, 0]));
+    for (const [, , , away, home, nat] of s.games) {
+      if (nat.some((n) => n !== "NBA TV")) continue;
+      for (const t of [away, home]) if (t in live) live[t]++;
+    }
+    if (shown) popup.setHTML(describe(...shown));
+  }).catch(() => {});
+
   // z: a map ZIP's record, or one built for a search-only ZIP; note: extra lines under the title
   function describe(zip, z = byZip.get(zip), note = postCensusNote(zip)) {
     let title = `ZIP ${zip}`;
@@ -385,24 +397,34 @@
     // (all dark when there's no blackout data to go by)
     const out = (i) => Array.isArray(z.idxs) && !z.idxs.includes(i);
     const line = (i, text) => `<div${out(i) ? ' class="label"' : ""}>${text}</div>`;
-    let closest, heading = "Closest Teams";
+    let closest, near, heading = "Closest Teams";
     if (dist === "drive" && z.drives && z.drives.length) {
       // miles by road when the data has them; older rows only have drive time
+      near = z.drives.map(([i]) => i);
       closest = z.drives.map(([i, m, mi]) => line(i, `${teams[i].name}: ${duration(m)} (${
         mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})`));
     } else {
       heading += " (straight line)";
-      closest = teams
-        .map((t, i) => ({ t, i, d: miles(z.lat, z.lon, t.lat, t.lon) }))
+      near = teams
+        .map((t, i) => ({ i, d: miles(z.lat, z.lon, t.lat, t.lon) }))
         .sort((a, b) => a.d - b.d)
         .slice(0, 5)
-        .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} mi`));
+        .map(({ i }) => i);
+      closest = near.map((i) => line(i, `${teams[i].name}: ${crow(teams[i])} mi`));
+    }
+    // the same teams' games live on League Pass here: none when blacked out locally,
+    // otherwise the scheduled games not on national TV
+    let watch = "";
+    if (live) {
+      const local = (i) => Array.isArray(z.idxs) && z.idxs.includes(i);
+      watch = `<div class="title closest"><a href="schedule.html" title="National TV blackouts by team">Live Games on League Pass</a> (of 82)</div>` +
+        near.map((i) => line(i, `${teams[i].name}: ${local(i) ? "0 (local blackout)" : live[teams[i].abbr] ?? "—"}`)).join("");
     }
     return `<div class="title">${title}</div>` + note +
       (z.noPop ? "" : row("ZIP Population", z.pop == null ? "—"
         : z.pop === 0 && poOnly.has(zip) ? "0 (PO Boxes Only)" : z.pop.toLocaleString())) +
       row("Blackout Team(s)", blackout) +
-      `<div class="title closest">${heading}</div>${closest.join("")}`;
+      `<div class="title closest">${heading}</div>${closest.join("")}` + watch;
   }
   function postCensusNote(zip) {
     if (!data.post_census || !(zip in data.post_census)) return "";
