@@ -1,10 +1,12 @@
 """Compute drive times from each ZIP to its closest NBA arenas with the
 OpenRouteService Matrix API, writing data/drive_times.csv.
 
-For each ZIP, the 8 arenas closest in a straight line are routed, and the 5
-shortest drives are kept. ZIPs are grouped by their set of candidate arenas so
-requests don't route pairs nobody needs; the free plan's daily quota covers
-roughly half the country, so a full run takes two days.
+For each ZIP, the 6 arenas closest in a straight line are routed, and the 5
+shortest drives are kept. The free plan's daily quota counts routes (each ZIP x
+arena pair; about 170,000 a day), not requests, so each request holds only ZIPs
+with the same candidate arenas: no pair is routed that nobody needs. That's
+about 6 routes per ZIP, so all ~33,000 ZIPs take about 200,000 routes: two days
+from scratch, and a daily run keeps up after that.
 
 Usage (needs a free key from openrouteservice.org):
     ORS_API_KEY=... python scripts/drive_times.py [--max-requests 450]
@@ -40,10 +42,11 @@ OUT = os.path.join(DATA, "drive_times.csv")
 API = "https://api.openrouteservice.org/v2/matrix/driving-car"
 SNAP_API = "https://api.openrouteservice.org/v2/snap/driving-car"
 
-CANDIDATES = 8        # arenas routed per ZIP, by straight-line distance
+CANDIDATES = 6        # arenas routed per ZIP, by straight-line distance (one spare over KEEP)
 KEEP = 5              # drives kept per ZIP
 MAX_ROUTES = 3500     # ORS limit on sources x destinations per request
-SNAP_CHUNK = 1000     # points per snap request
+SNAP_CHUNK = 1000     # points per snap request; a failed one is retried in halves down to SNAP_MIN
+SNAP_MIN = 125
 SNAP_RADIUS = 5000    # meters to look for a road around a ZIP's point
 # population tiers, routed in this order (within a tier, ZIPs are grouped by candidate arenas)
 POP_TIERS = (25000, 10000, 2500, 500, 0)
@@ -113,21 +116,39 @@ class Matrix:
         """Each (lat, lon) moved to the nearest road within SNAP_RADIUS, or kept as is
         when ORS finds none. Best effort: any failure keeps the original points."""
         out = list(points)
-        for start in range(0, len(points), SNAP_CHUNK):
-            chunk = points[start:start + SNAP_CHUNK]
+        failed = []
+
+        def attempt(start, n):
+            chunk = points[start:start + n]
             body = {"locations": [[lon, lat] for lat, lon in chunk], "radius": SNAP_RADIUS}
             try:
                 r = self.session.post(SNAP_API, json=body, timeout=120)
                 time.sleep(self.pause)
+                if "quota" in r.text.lower():
+                    raise Budget()
                 r.raise_for_status()
                 snapped = r.json()["locations"]
             except (requests.RequestException, ValueError, KeyError) as e:
-                print(f"::warning::Couldn't snap ZIP points to roads ({e}); routing from the Census points",
-                      file=sys.stderr)
-                return out
+                if n > SNAP_MIN:  # retry in halves
+                    attempt(start, n // 2)
+                    attempt(start + n // 2, n - n // 2)
+                else:
+                    failed.append(f"{n} points ({e})")
+                return
             for i, s in enumerate(snapped):
                 if s and s.get("location"):
                     out[start + i] = (s["location"][1], s["location"][0])
+
+        try:
+            for start in range(0, len(points), SNAP_CHUNK):
+                if len(failed) >= 5:  # the service is down; don't spend the run on it
+                    break
+                attempt(start, min(SNAP_CHUNK, len(points) - start))
+        except Budget:
+            print("::warning::ORS snap quota used up; routing the rest from the Census points", file=sys.stderr)
+        if failed:
+            print(f"::warning::Couldn't snap {len(failed)} chunks ({failed[0]}); those route from the Census points",
+                  file=sys.stderr)
         return out
 
 
@@ -196,16 +217,18 @@ def check_arenas(matrix, teams):
 
 
 def batches(todo):
-    """Group ZIPs (already sorted by candidate arenas) so that
-    ZIP count x distinct arenas stays within MAX_ROUTES."""
-    batch, arenas = [], set()
+    """Group ZIPs (already sorted by tier, then candidate arenas) so each request holds
+    only ZIPs with the same candidate arenas, up to MAX_ROUTES. ORS counts every
+    ZIP x arena pair in a request against the daily quota, so a request mixing
+    candidate sets would route pairs nobody needs; the extra requests are cheap."""
+    batch, key = [], None
     for z in todo:
-        grown = arenas | set(z["cands"])
-        if batch and (len(batch) + 1) * len(grown) > MAX_ROUTES:
+        k = (z["tier"], tuple(sorted(z["cands"])))
+        if batch and (k != key or (len(batch) + 1) * len(z["cands"]) > MAX_ROUTES):
             yield batch
-            batch, grown = [], set(z["cands"])
+            batch = []
         batch.append(z)
-        arenas = grown
+        key = k
     if batch:
         yield batch
 
