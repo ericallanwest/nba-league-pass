@@ -62,7 +62,7 @@
       return `<span class="seg seg-${cat.key}${n < 5 ? " small" : ""}" style="flex:${n}" data-tip="${r.team.city} ${r.team.name}: ${n} game${n === 1 ? "" : "s"} ${what}">${n >= 3 ? n : ""}</span>`;
     }).join("");
     row.innerHTML = `
-      <span class="team" role="cell"><span class="abbr">${r.abbr}</span><span class="name">${r.team.city} ${r.team.name}</span></span>
+      <a class="team" role="cell" href="#team=${r.abbr}"><span class="abbr">${r.abbr}</span><span class="name">${r.team.city} ${r.team.name}</span></a>
       <span class="bar" role="cell" aria-label="${r.live} live, ${r.blackout} national blackouts${r.c.tbd ? `, ${r.c.tbd} not yet scheduled` : ""}">${bar}</span>
       <span class="num" role="cell"><b>${r.live}</b> <span class="muted">of ${GAMES}</span></span>`;
     els.set(r.abbr, row);
@@ -82,6 +82,71 @@
   document.getElementById("league").textContent =
     `${data.season} season: ${national} of ${scheduled.toLocaleString()} scheduled games are national blackouts, ` +
     `from ${lo} per team (${who(lo)}) to ${hi} (${who(hi)}).`;
+
+  // ---- game-by-game table for one team (#team=ABBR) ----
+  const pick = document.getElementById("team-pick");
+  const onlyOut = document.getElementById("only-out");
+  const tbody = document.querySelector("#games-table tbody");
+  for (const r of [...rows].sort((a, b) => (a.team.city + a.team.name).localeCompare(b.team.city + b.team.name))) {
+    pick.add(new Option(`${r.team.city} ${r.team.name}`, r.abbr));
+  }
+  const WD = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
+  const MD = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const fmtDate = (d) => {
+    const day = new Date(`${d}T12:00:00Z`);
+    return `<span class="wd">${WD.format(day)}, </span>${MD.format(day)}`;
+  };
+  const fmtTime = (t) => {
+    if (!t) return "TBD";
+    const [h, m] = t.split(":").map(Number);
+    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
+  };
+  const tag = (label) => label.replace(/^(Emirates|AWS) /, "").replace(/ (East|West) Group [A-C]$/, "");
+  const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  function renderGames(abbr) {
+    const r = rows.find((x) => x.abbr === abbr);
+    for (const [a, el] of els) el.classList.toggle("sel", a === abbr);
+    pick.value = r ? abbr : "";
+    document.getElementById("games-body").hidden = !r;
+    const sum = document.getElementById("games-sum");
+    document.getElementById("games-title").textContent = r ? `${r.team.city} ${r.team.name}` : "Game by game";
+    if (!r) {
+      sum.textContent = "Click a team in the chart, or choose one here, to see which of its games are blacked out on League Pass outside its local area.";
+      return;
+    }
+    document.getElementById("games").style.setProperty("--team", r.team.color);
+    sum.innerHTML = `<b>${r.live}</b> live on League Pass, <b>${r.blackout}</b> blacked out on national TV` +
+      (r.c.tbd ? `, ${r.c.tbd} NBA Cup game${r.c.tbd === 1 ? "" : "s"} not yet scheduled` : "") + ".";
+    tbody.innerHTML = data.games.filter((g) => g[3] === abbr || g[4] === abbr).map(([, date, time, away, home, nat, label]) => {
+      const home_ = home === abbr, opp = home_ ? away : home, o = data.teams[opp];
+      const cat = category(nat);
+      const out = !CATS.find((c) => c.key === cat).live;
+      const nets = NATIONAL.find((c) => c.key === cat);
+      const status = out
+        ? `<span class="st st-out">Blacked out</span> <span class="net">${esc(nat.filter((n) => n !== "NBA TV" && n !== "Telemundo").join(" / "))}</span>`
+        : `<span class="st st-live">Live</span>${cat === "nbatv" ? ' <span class="net">(also on NBA TV)</span>' : ""}`;
+      return `<tr class="${out ? "out" : "live"}${nets ? " n-" + cat : ""}">
+        <td class="date">${fmtDate(date)}</td>
+        <td class="opp">${home_ ? "vs" : "@"} <b>${opp}</b><span class="oname"> ${o ? esc(o.name) : ""}</span>${label ? ` <span class="tag">${esc(tag(label))}</span>` : ""}</td>
+        <td class="time">${fmtTime(time)}</td>
+        <td class="status">${status}</td></tr>`;
+    }).join("");
+    filterGames();
+  }
+  function filterGames() {
+    document.getElementById("games-table").classList.toggle("only-out", onlyOut.checked);
+  }
+  onlyOut.addEventListener("change", filterGames);
+  pick.addEventListener("change", () => { location.hash = pick.value ? `team=${pick.value}` : ""; });
+  const fromHash = () => (location.hash.match(/team=([A-Z]{3})/) || [])[1];
+  window.addEventListener("hashchange", () => {
+    renderGames(fromHash());
+    if (fromHash()) document.getElementById("games").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  renderGames(fromHash());
+  // arriving from the map with #team=ABBR: go straight to the table
+  if (fromHash()) document.getElementById("games").scrollIntoView({ block: "start" });
 
   // tooltip: hover on desktop, tap on touch
   function show(e) {

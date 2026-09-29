@@ -152,6 +152,7 @@
 
   // ---- team list ----
   const NONE_COLOR = "#2a9d8f"; // ZIPs with no data from NBA.com
+  const CAL_ICON = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.4"/></svg>';
   const list = document.getElementById("teams");
   const order = teams.map((_, i) => i).sort((a, b) => teams[a].city.localeCompare(teams[b].city));
   for (const i of order) {
@@ -164,6 +165,7 @@
         <span class="name">${t.city} ${t.name}</span>
       </label>
       <span class="count" title="${teamPeople[i].toLocaleString()} people in ${counts[i].toLocaleString()} ZIP codes blacked out">${compact(teamPeople[i])}</span>
+      <a class="sched" href="schedule.html#team=${t.abbr}" title="${t.name} games and national TV blackouts" aria-label="${t.city} ${t.name} schedule">${CAL_ICON}</a>
       <button type="button" class="only" title="Show only this team">only</button>`;
     li.querySelector("input").addEventListener("change", (e) => {
       e.target.checked ? selected.add(t.abbr) : selected.delete(t.abbr);
