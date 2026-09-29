@@ -1,9 +1,16 @@
 // NBA League Pass blackout map. Data: data/blackouts.json, built by scripts/build_site_data.py.
 (async function () {
-  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  // theme: "auto" follows the system setting; Light/Dark are saved per browser
+  const systemDark = matchMedia("(prefers-color-scheme: dark)");
+  let theme = "auto";
+  try { theme = localStorage.getItem("theme") || "auto"; } catch (e) {}
+  if (!["auto", "light", "dark"].includes(theme)) theme = "auto";
+  const isDark = () => (theme === "auto" ? systemDark.matches : theme === "dark");
+  let dark = isDark();
+  const basemap = () => `https://basemaps.cartocdn.com/gl/${dark ? "dark-matter" : "positron"}-gl-style/style.json`;
   const map = new maplibregl.Map({
     container: "map",
-    style: `https://basemaps.cartocdn.com/gl/${dark ? "dark-matter" : "positron"}-gl-style/style.json`,
+    style: basemap(),
     bounds: [[-125, 24], [-66.5, 49.5]],
     fitBoundsOptions: { padding: 20 },
     attributionControl: { compact: true },
@@ -145,8 +152,9 @@
 
   // ---- map styling from the filters ----
   const NONE_COLOR = "#2a9d8f";
-  const GRAY = dark ? "#4a4a46" : "#d2d2cc";
-  const OUTLINE = dark ? "#9a9a94" : "#5f5f58"; // darker outline on blacked-out dots
+  const GRAY = () => (dark ? "#4a4a46" : "#d2d2cc");
+  const OUTLINE = () => (dark ? "#9a9a94" : "#5f5f58"); // darker outline on blacked-out dots
+  const RING = () => (dark ? "#f0f0ec" : "#1c1c1c");
   const COUNT_TEST = { any: (n) => n >= 1, one: (n) => n === 1, multiple: (n) => n >= 2, none: (n) => n === 0 };
   const COUNT_EXPR = {
     any: [">=", ["get", "n"], 1], one: ["==", ["get", "n"], 1],
@@ -211,19 +219,21 @@
       const { hit, other, color } = expressions();
       map.setFilter("zips-hit", hit);
       map.setPaintProperty("zips-hit", "circle-color", color);
-      // every blacked-out dot gets the darker outline
-      map.setPaintProperty("zips-hit", "circle-stroke-color", OUTLINE);
-      // "None" shows ZIPs with no blackout, which get no outline
-      map.setPaintProperty("zips-hit", "circle-stroke-width", mode === "none" ? 0 : ["interpolate", ["linear"], ["zoom"],
-        3, 0.25, 7, 0.9]);
+      // every dot in the filter gets the darker outline
+      map.setPaintProperty("zips-hit", "circle-stroke-color", OUTLINE());
+      map.setPaintProperty("zips-hit", "circle-stroke-width", ["interpolate", ["linear"], ["zoom"], 3, 0.25, 7, 0.9]);
+      map.setPaintProperty("zips-other", "circle-color", GRAY());
+      map.setPaintProperty("rings", "line-color", RING());
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
       map.setFilter("zips-pie", mode === "none" ? false : ["all", hit, [">=", ["get", "n"], 2]]);
       map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
       map.setFilter("zips-other", other);
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
       map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
-      map.setFilter("rings", ["in", ["get", "abbr"], ["literal", [...selected]]]);
-      map.setLayoutProperty("rings", "visibility", rings.checked && mode !== "none" ? "visible" : "none");
+      // rings for the selected teams; every arena's when there's no selection to follow (no teams, or "None")
+      const ringTeams = mode === "none" || !selected.size ? teams.map((t) => t.abbr) : [...selected];
+      map.setFilter("rings", ["in", ["get", "abbr"], ["literal", ringTeams]]);
+      map.setLayoutProperty("rings", "visibility", rings.checked ? "visible" : "none");
     }
     for (const [abbr, el] of markers) el.style.opacity = mode === "none" || selected.has(abbr) ? 1 : 0.35;
 
@@ -423,6 +433,36 @@
     return ctx.getImageData(0, 0, size, size);
   }
 
+  // ---- theme switch ----
+  function setupTheme() {
+    const OURS = new Set(["zips", "rings"]);
+    function apply() {
+      if (theme === "auto") delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = theme;
+      if (isDark() === dark) return;
+      dark = isDark();
+      // swap the basemap, carrying our sources and layers over to the new style
+      map.setStyle(basemap(), {
+        diff: false, // a full reload, so "style.load" fires and update() can restyle for the theme
+        transformStyle: (prev, next) => ({
+          ...next,
+          sources: { ...next.sources, ...Object.fromEntries(Object.entries(prev.sources).filter(([id]) => OURS.has(id))) },
+          layers: [...next.layers, ...prev.layers.filter((l) => OURS.has(l.source))],
+        }),
+      });
+      map.once("style.load", update);
+    }
+    for (const r of document.querySelectorAll("#theme input")) {
+      r.checked = r.value === theme;
+      r.onchange = () => {
+        theme = r.value;
+        try { theme === "auto" ? localStorage.removeItem("theme") : localStorage.setItem("theme", theme); } catch (e) {}
+        apply();
+      };
+    }
+    systemDark.addEventListener("change", () => theme === "auto" && apply());
+  }
+
   // ---- layers ----
   mapLoaded.then(() => {
     map.addSource("zips", { type: "geojson", data: { type: "FeatureCollection", features } });
@@ -433,7 +473,7 @@
       paint: {
         "circle-radius": radius(0.8),
         // ZIPs outside the filter: plain gray, no outline
-        "circle-color": GRAY,
+        "circle-color": GRAY(),
         "circle-opacity": 0.85,
       },
     });
@@ -471,7 +511,7 @@
       type: "line",
       source: "rings",
       // neutral like the Tableau viz; a team-colored ring disappears into that team's dots
-      paint: { "line-color": dark ? "#f0f0ec" : "#1c1c1c", "line-width": 1.6, "line-opacity": 0.9 },
+      paint: { "line-color": RING(), "line-width": 1.6, "line-opacity": 0.9 },
     });
     for (const layer of ["zips-hit", "zips-other"]) {
       map.on("click", layer, (e) => showZip(e.features[0].properties.z));
@@ -479,6 +519,7 @@
       map.on("mouseleave", layer, () => (map.getCanvas().style.cursor = ""));
     }
     update();
+    setupTheme();
     const zip = params.get("zip");
     if (zip && /^\d{5}$/.test(zip)) {
       document.getElementById("zip").value = zip;

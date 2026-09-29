@@ -78,7 +78,7 @@ section > h2 { margin: 12px 0 6px; }
 section > h2:first-child { margin-top: 0; }
 
 .segmented { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-.segmented label { flex: 1; cursor: pointer; }
+.segmented label { flex: 1; cursor: pointer; position: relative; }
 .segmented input { position: absolute; opacity: 0; pointer-events: none; }
 .segmented span { display: block; text-align: center; padding: 5px 0; font-size: 13px; background: var(--bg); }
 .segmented label + label span { border-left: 1px solid var(--border); }
