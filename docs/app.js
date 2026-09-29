@@ -85,6 +85,7 @@
   // population slider stops; the last position means "no upper limit"
   const POP_STOPS = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
   const TOP = POP_STOPS.length;
+  const DEFAULT_LO = POP_STOPS.indexOf(500); // default view leaves out the smallest ZIPs so the map isn't so busy
   let mode = ["any", "one", "multiple", "none"].includes(params.get("blackouts")) ? params.get("blackouts") : "any";
   document.querySelector(`#count input[value="${mode}"]`).checked = true;
   if (params.get("other") === "1") showOther.checked = true;
@@ -104,12 +105,13 @@
   }
   const popRange = () => [POP_STOPS[+popLo.value], +popHi.value === TOP ? Infinity : POP_STOPS[+popHi.value]];
   const popFull = () => +popLo.value === 0 && +popHi.value === TOP;
+  const popDefault = () => +popLo.value === DEFAULT_LO && +popHi.value === TOP;
 
   function writeHash(zip) {
     const p = new URLSearchParams();
     if (selected.size !== teams.length) p.set("teams", [...selected].join(","));
     if (mode !== "any") p.set("blackouts", mode);
-    if (!popFull()) {
+    if (!popDefault()) {
       const [lo, hi] = popRange();
       p.set("pop", `${lo}-${hi === Infinity ? "" : hi}`);
     }
@@ -248,6 +250,11 @@
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
       map.setFilter("zips-pie", mode === "none" ? false : ["all", hit, [">=", ["get", "n"], 2]]);
       map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
+      map.setFilter("zips-searched", ["==", ["get", "z"], highlighted]);
+      // a filtered-out ZIP gets a gray dot; one already shown just gets the ring
+      map.setPaintProperty("zips-searched", "circle-color", ["case", hit, "rgba(0,0,0,0)", GRAY()]);
+      map.setPaintProperty("zips-searched", "circle-radius", radius(1));
+      map.setPaintProperty("zips-searched", "circle-stroke-color", dark ? "#f0f0ec" : "#1c1c1c");
       map.setFilter("zips-other", other);
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
       map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
@@ -396,7 +403,17 @@
   function showZip(zip) {
     const z = byZip.get(zip);
     popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip)).addTo(map);
+    highlight(zip);
   }
+
+  // the ZIP whose popup is open gets a ring, and its dot is drawn even when the
+  // filters (population, teams) would hide it
+  let highlighted = "";
+  function highlight(zip) {
+    highlighted = zip;
+    if (map.getLayer("zips-searched")) update();
+  }
+  popup.on("close", () => highlight(""));
 
   const result = document.getElementById("search-result");
   async function search(zip, fly = true) {
@@ -546,6 +563,13 @@
       if (kind !== "pie" || map.hasImage(e.id)) return;
       const colors = pk.split(",").map((a) => teams.find((t) => t.abbr === a).color);
       map.addImage(e.id, pieImage(colors), { pixelRatio: 2 });
+    });
+    map.addLayer({
+      id: "zips-searched",
+      type: "circle",
+      source: "zips",
+      filter: ["==", ["get", "z"], ""],
+      paint: { "circle-stroke-width": 2.5, "circle-opacity": 0.85 },
     });
     map.addSource("rings", { type: "geojson", data: { type: "FeatureCollection", features: teams.map((t) => ring(t)) } });
     map.addLayer({

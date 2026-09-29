@@ -29,6 +29,14 @@
     </form>
 
     <section>
+      <h2>ZIP population</h2>
+      <div class="range">
+        <div class="range-track"><div class="range-fill"></div></div>
+        <input type="range" id="pop-lo" min="0" max="11" step="1" value="3" aria-label="Minimum population">
+        <input type="range" id="pop-hi" min="0" max="11" step="1" value="11" aria-label="Maximum population">
+      </div>
+      <p id="pop-label" class="range-label"></p>
+
       <h2>Blacked-out teams per ZIP</h2>
       <div id="count" class="segmented" role="radiogroup" aria-label="Number of teams blacked out">
         <label><input type="radio" name="count" value="any" checked><span>All</span></label>
@@ -36,14 +44,6 @@
         <label><input type="radio" name="count" value="multiple"><span>Multiple</span></label>
         <label><input type="radio" name="count" value="none"><span>None</span></label>
       </div>
-
-      <h2>ZIP population</h2>
-      <div class="range">
-        <div class="range-track"><div class="range-fill"></div></div>
-        <input type="range" id="pop-lo" min="0" max="11" step="1" value="0" aria-label="Minimum population">
-        <input type="range" id="pop-hi" min="0" max="11" step="1" value="11" aria-label="Maximum population">
-      </div>
-      <p id="pop-label" class="range-label"></p>
 
       <p id="summary" aria-live="polite"></p>
     </section>
