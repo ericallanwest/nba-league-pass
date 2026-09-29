@@ -49,7 +49,11 @@ body {
 #map { flex: 1; height: 100%; }
 
 h1 { font-size: 18px; margin: 0 0 16px; }
-.page-link { margin: -10px 0 16px; font-size: 13px; }
+/* links between the map and the schedule page, styled as tabs */
+.page-nav { display: flex; gap: 4px; margin: -6px 0 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.page-nav a { padding: 5px 10px; white-space: nowrap; color: var(--muted); text-decoration: none; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; margin-bottom: -1px; }
+.page-nav a:hover { color: var(--text); background: var(--hover); }
+.page-nav a[aria-current="page"] { color: var(--text); font-weight: 600; background: var(--bg); border-color: var(--border); }
 h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0; color: var(--muted); }
 a { color: var(--accent); }
 
