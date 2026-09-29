@@ -131,7 +131,9 @@ def main():
         # people in the ZIP: each tract's population times the tract's residential share in this ZIP
         people = 0.0
         for t in tracts:
-            share = next((float(x.get("res_ratio") or 0) for x in hud.results(6, t["geoid"]) if x.get("zip") == z), 0.0)
+            # in tract-to-ZIP results the ZIP is in "geoid" (the output geography)
+            share = next((float(x.get("res_ratio") or 0) for x in hud.results(6, t["geoid"])
+                          if str(x.get("zip") or x.get("geoid") or "").zfill(5) == z), 0.0)
             people += pops.get(t["geoid"], 0) * share
         row = {"zip": z, "parent": parent, "lat": round(where[0], 5), "lon": round(where[1], 5),
                "population": round(people), "parent_lat": "", "parent_lon": ""}
