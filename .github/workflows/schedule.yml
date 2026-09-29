@@ -1,8 +1,8 @@
 name: NBA schedule
 
 # Fetches the regular-season schedule and national broadcasters from cdn.nba.com
-# (blocked from the dev sandbox) and commits data/schedule.csv to the branch it
-# runs on. Weekly, since national TV picks can change during the season.
+# (via its S3 mirror; the CDN blocks runners) and commits data/schedule.csv to the branch it
+# runs on. Weekly, since national TV picks change and NBA Cup games are added in December.
 on:
   workflow_dispatch:
   schedule:

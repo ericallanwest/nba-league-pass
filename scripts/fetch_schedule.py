@@ -8,8 +8,8 @@ League Pass blacks out live games on ESPN, ABC, NBC, Peacock and Amazon Prime
 Video everywhere; NBA TV games stay watchable (subject to local blackouts), so
 national_blackout is 1 when any national broadcaster other than NBA TV is listed.
 
-cdn.nba.com refuses some networks (it blocks this repo's dev sandbox), so this
-runs in GitHub Actions (.github/workflows/schedule.yml).
+Runs weekly in GitHub Actions (.github/workflows/schedule.yml) to pick up
+national TV changes and the NBA Cup games scheduled after the group stage.
 """
 import csv
 import json
@@ -19,7 +19,10 @@ from pathlib import Path
 
 import requests
 
-URL = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json"
+# cdn.nba.com answers 403 to GitHub's runners too; the same file is mirrored on
+# NBA's public S3 bucket, which doesn't.
+URLS = ["https://nba-prod-us-east-1-mediaops-stats.s3.amazonaws.com/NBA/staticData/scheduleLeagueV2.json",
+        "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json"]
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "schedule.csv"
 HEADERS = {
@@ -32,8 +35,9 @@ HEADERS = {
 
 # Canonical names for the networks League Pass blacks out nationally.
 BLACKOUT = [("prime", "Prime Video"), ("amazon", "Prime Video"),
-            ("peacock", "Peacock"), ("espn", "ESPN"), ("abc", "ABC"),
-            ("nbc", "NBC")]
+            ("peacock", "Peacock"), ("nbc sports network", "NBCSN"),
+            ("espn", "ESPN"), ("abc", "ABC"), ("nbc", "NBC"),
+            ("telemundo", "Telemundo")]  # NBCSN and Telemundo simulcast Peacock games
 
 
 def canonical(name):
@@ -60,7 +64,11 @@ def names(game, *keys, scope=None):
 
 
 def main():
-    r = requests.get(URL, headers=HEADERS, timeout=60)
+    for url in URLS:
+        r = requests.get(url, headers=HEADERS, timeout=60)
+        print(r.status_code, url)
+        if r.ok:
+            break
     r.raise_for_status()
     sched = r.json()["leagueSchedule"]
     print("season", sched.get("seasonYear"), "league", sched.get("leagueId"))
@@ -109,7 +117,7 @@ def main():
     print("\nnational broadcaster names as listed:")
     for n, c in raw_national.most_common():
         print(f"  {c:5d}  {n}  ->  {canonical(n)}")
-    unknown = [n for n in raw_national if canonical(n) == n and n not in ("ESPN", "ABC", "NBC", "Peacock", "Prime Video", "NBA TV")]
+    unknown = [n for n in raw_national if canonical(n) == n and n not in {c for _, c in BLACKOUT} | {"NBA TV"}]
     if unknown:
         print("::warning::unrecognized national broadcasters (counted as blackouts):", unknown)
 
