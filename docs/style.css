@@ -34,11 +34,23 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  display: flex;
+  display: flex; flex-direction: column;
 }
 
+/* top bar: the two panel toggles around the title */
+#topbar {
+  flex: none; display: flex; align-items: center; gap: 12px; padding: 6px 10px;
+  background: var(--panel); border-bottom: 1px solid var(--border);
+}
+#topbar h1 { flex: 1; margin: 0; font-size: 16px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; white-space: nowrap; }
+.panel-toggle svg { flex: none; }
+.panel-toggle[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+#layout { flex: 1; min-height: 0; display: flex; position: relative; }
+#panel[hidden], #tv[hidden] { display: none; }
+
 #panel {
-  width: 340px;
+  width: 320px;
   flex: none;
   height: 100%;
   overflow-y: auto;
@@ -49,11 +61,6 @@ body {
 #map { flex: 1; height: 100%; }
 
 h1 { font-size: 18px; margin: 0 0 16px; }
-/* links between the map and the schedule page, styled as tabs */
-.page-nav { display: flex; gap: 4px; margin: -6px 0 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
-.page-nav a { padding: 5px 10px; white-space: nowrap; color: var(--muted); text-decoration: none; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; margin-bottom: -1px; }
-.page-nav a:hover { color: var(--text); background: var(--hover); }
-.page-nav a[aria-current="page"] { color: var(--text); font-weight: 600; background: var(--bg); border-color: var(--border); }
 h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0; color: var(--muted); }
 a { color: var(--accent); }
 
@@ -125,7 +132,7 @@ section > h2:first-child { margin-top: 0; }
 #teams .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px var(--swatch-outline); }
 #teams .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
-#teams .sched { display: flex; color: var(--muted); padding: 2px; border-radius: 4px; }
+#teams .sched { display: flex; color: var(--muted); padding: 2px; border: 0; background: none; border-radius: 4px; }
 #teams .sched:hover, #teams .sched:focus-visible { color: var(--accent); background: var(--bg); }
 #teams .only {
   visibility: hidden; padding: 0 6px; font-size: 11px; line-height: 18px;
@@ -168,11 +175,17 @@ section > h2:first-child { margin-top: 0; }
 .maplibregl-popup-content .closest { margin-top: 12px; color: #8a8a85; }
 .maplibregl-popup-content .label { color: #8a8a85; }
 
-@media (max-width: 720px) {
-  body { flex-direction: column; }
-  #panel { width: 100%; height: auto; max-height: 45vh; border-right: 0; border-bottom: 1px solid var(--border); }
-  #map { height: auto; min-height: 55vh; }
+/* narrow screens: the panels open over the map, one at a time */
+@media (max-width: 900px) {
+  #panel, #tv { position: absolute; top: 0; bottom: 0; z-index: 5; width: min(100%, 420px); box-shadow: 0 0 16px rgba(0,0,0,.25); }
+  #panel { left: 0; }
+  #tv { right: 0; }
   #teams .only { visibility: visible; }
+}
+@media (max-width: 520px) {
+  #topbar h1 { font-size: 14px; }
+  .panel-toggle span { display: none; }
+  #topbar h1 { text-align: left; }
 }
 
 /* MapLibre styles control buttons as display:block; center the icon in both directions */
