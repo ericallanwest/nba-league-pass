@@ -75,6 +75,7 @@ class Matrix:
         self.left = max_requests
         self.routes = 0
         self.pause = pause
+        self.first = True
 
     def __call__(self, origins, arenas):
         """(minutes, miles) by road from each origin (lat, lon) to each arena, or None if unroutable.
@@ -94,11 +95,14 @@ class Matrix:
             r = self.session.post(API, json=body, timeout=120)
             time.sleep(self.pause)
             if r.status_code == 200:
+                if self.first:  # how much of the daily quota is left, and when it resets
+                    print(f"Matrix quota at the start: {describe(r)}", file=sys.stderr)
+                    self.first = False
                 d = r.json()
                 return [[None if s is None or m is None else (round(s / 60), round(m)) for s, m in zip(srow, mrow)]
                         for srow, mrow in zip(d["durations"], d["distances"])]
             if "quota" in r.text.lower():  # daily quota, sent as 403 or 429
-                raise Budget()
+                raise Budget(describe(r))
             if "routable point" in r.text:  # a location with no road nearby, whatever the status code
                 raise Unroutable(r.text[:300])
             if r.status_code == 429:  # per-minute rate limit
@@ -154,6 +158,22 @@ class Matrix:
 
 class Budget(Exception):
     pass
+
+
+def describe(r):
+    """Status, ORS's rate-limit headers (reset as UTC time) and the start of the body, for the log."""
+    h = {k.lower(): v for k, v in r.headers.items()}
+    parts = [f"HTTP {r.status_code}"]
+    for k in ("x-ratelimit-limit", "x-ratelimit-remaining"):
+        if k in h:
+            parts.append(f"{k[12:]} {h[k]}")
+    if h.get("x-ratelimit-reset", "").isdigit():
+        t = int(h["x-ratelimit-reset"])
+        reset = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(t / 1000 if t > 1e11 else t))  # seconds or ms
+        parts.append(f"resets {reset}")
+    if r.status_code != 200:
+        parts.append(r.text[:200].replace("\n", " "))
+    return ", ".join(parts)
 
 
 class Unroutable(Exception):
@@ -277,8 +297,8 @@ def main():
     if todo or args.check_arenas:
         try:
             check_arenas(matrix, teams)
-        except Budget:
-            print("::warning::ORS quota used up before the arena check; re-run tomorrow", file=sys.stderr)
+        except Budget as e:
+            print(f"::warning::ORS quota used up before the arena check; re-run tomorrow (ORS: {e})", file=sys.stderr)
             return
     if args.check_arenas:
         return
@@ -302,10 +322,11 @@ def main():
                     n += 1
                 f.flush()
                 print(f"  {n}/{len(todo)} routed, {matrix.routes} routes used, {matrix.left} requests left", file=sys.stderr)
-        except Budget:
+        except Budget as e:
             # not an error: progress is saved, and the next run resumes
             print(f"::warning::ORS quota or request budget used up after {matrix.routes} routes, "
-                  f"with {len(todo) - n} ZIPs left; re-run tomorrow to continue", file=sys.stderr)
+                  f"with {len(todo) - n} ZIPs left; re-run tomorrow to continue"
+                  + (f" (ORS: {e})" if str(e) else ""), file=sys.stderr)
 
     # tidy: one row per ZIP, sorted
     with open(OUT, newline="", encoding="utf-8") as f:
