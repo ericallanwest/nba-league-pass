@@ -13,14 +13,11 @@
 :root[data-theme="dark"] { --abc: #e2e2de; --espn: #bdbdb7; --nbc: #98988f; --peacock: #74746e; --prime: #52524e; --local: #c65f5f; }
 
 #tv {
-  width: 440px; flex: none; height: 100%; overflow-y: auto;
+  width: var(--rw); flex: none; height: 100%; overflow-y: auto;
   background: var(--panel); border-left: 1px solid var(--border); padding: 12px 16px 24px;
 }
 #tv .muted { color: var(--muted); }
-.tv-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.tv-head h2 { margin: 0; }
-button.close { border: 0; background: none; font-size: 20px; line-height: 1; padding: 2px 6px; color: var(--muted); }
-button.close:hover { color: var(--text); background: var(--hover); }
+.tv-title { margin: 4px 0 8px; font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); white-space: nowrap; }
 button.link { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; font: inherit; cursor: pointer; }
 #tv .lede { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
 #tv-context { margin: 0 0 12px; padding: 8px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); font-size: 13px; }
@@ -78,19 +75,21 @@ button.link { border: 0; background: none; padding: 0; color: var(--accent); tex
 .games-tools { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
 .only-out { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-size: 13px; }
 #show-on-map { font-size: 12px; padding: 3px 8px; }
-#games-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+#games-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 13px; }
+#games-table .c-date { width: 18%; }
+#games-table .c-opp { width: 30%; }
+#games-table .c-time { width: 18%; }
+#games-table .c-lp { width: 34%; }
 #games-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; padding: 4px 5px; border-bottom: 1px solid var(--border); }
-#games-table td { padding: 4px 5px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+#games-table td { padding: 4px 5px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #games-table td.status { white-space: normal; }
 #games-table .wd { display: none; }
 #games-table .tag { font-size: 10px; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 3px; margin-left: 3px; }
 #games-table tr.out td { background: var(--hover); color: var(--muted); }
 #games-table tr.out .opp b { color: var(--text); }
-#games-table.only-out tr.live { display: none; }
-.st { font-weight: 600; }
-.st-live::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--team); margin-right: 5px; vertical-align: -1px; }
-.st-out { color: var(--text); }
-.net { color: var(--muted); display: block; font-size: 12px; }
+#games-table.out-only tr.live { display: none; }
+.net { color: var(--muted); }
+#games-table tr.out .net { color: var(--text); }
 
 #tv-notes { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
 #tv-notes summary { cursor: pointer; font-weight: 600; }
@@ -100,8 +99,4 @@ button.link { border: 0; background: none; padding: 0; color: var(--accent); tex
 #tip {
   position: fixed; z-index: 20; pointer-events: none; max-width: 280px;
   background: var(--text); color: var(--bg); font-size: 12px; padding: 5px 8px; border-radius: 5px;
-}
-
-@media (max-width: 900px) {
-  #tv { width: min(100%, 420px); }
 }

@@ -163,18 +163,20 @@ window.TV = (function () {
         const atHome = home === team, opp = atHome ? away : home, o = data.teams[opp];
         const cat = category(away, home, nat);
         const out = !IS_LIVE[cat];
-        const status = cat === "local"
-          ? `<span class="st st-out">Local blackout</span> <span class="net">${esc([away, home].filter((a) => local().includes(a)).map((a) => data.teams[a].name).join(" / "))}</span>`
-          : out
-          ? `<span class="st st-out">Blacked out</span> <span class="net">${esc(nat.filter((n) => n !== "NBA TV" && n !== "Telemundo").join(" / "))}</span>`
-          : `<span class="st st-live">Live</span>${cat === "nbatv" ? ' <span class="net">(also on NBA TV)</span>' : ""}`;
+        // ✅ watchable on League Pass (noting NBA TV), ❌ not, with the network or local team to blame
+        const why = cat === "local"
+          ? `Local (${[away, home].filter((a) => local().includes(a)).map((a) => data.teams[a].name).join(" / ")})`
+          : nat.filter((n) => n !== "NBA TV" && n !== "Telemundo").join(" / ");
+        const status = out
+          ? `<span role="img" aria-label="Blacked out">❌</span> <span class="net">${esc(why)}</span>`
+          : `<span role="img" aria-label="Live on League Pass">✅</span>${cat === "nbatv" ? ' <span class="net">(NBA TV)</span>' : ""}`;
         return `<tr class="${out ? "out" : "live"}">
           <td class="date">${fmtDate(date)}</td>
           <td class="opp">${atHome ? "vs" : "@"} <b>${opp}</b>${label ? ` <span class="tag">${esc(tag(label))}</span>` : ""}</td>
           <td class="time">${fmtTime(time)}</td>
           <td class="status">${status}</td></tr>`;
       }).join("");
-    $("games-table").classList.toggle("only-out", $("only-out").checked);
+    $("games-table").classList.toggle("out-only", $("only-out").checked);
   }
 
   function render() {
@@ -208,7 +210,7 @@ window.TV = (function () {
       pick.add(new Option(`${t.city} ${t.name}`, abbr));
     }
     pick.addEventListener("change", () => show(pick.value, false));
-    $("only-out").addEventListener("change", () => $("games-table").classList.toggle("only-out", $("only-out").checked));
+    $("only-out").addEventListener("change", () => $("games-table").classList.toggle("out-only", $("only-out").checked));
     $("show-on-map").addEventListener("click", () => team && hooks.showOnMap(team));
     for (const input of document.querySelectorAll("#sort input")) {
       input.addEventListener("change", () => { sortBy = input.value; sort(); });

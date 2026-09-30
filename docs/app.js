@@ -40,14 +40,16 @@
     tv: { el: document.getElementById("tv"), btn: document.getElementById("toggle-tv") },
   };
   let afterPanels = () => {}; // set once the hash can be written
+  const HIDDEN_CLASS = { panel: "left-hidden", tv: "tv-hidden" };
+  const isOpen = (which) => !document.body.classList.contains(HIDDEN_CLASS[which]);
   function setPanel(which, open, remember = true) {
-    const { el, btn } = PANELS[which];
-    el.hidden = !open;
-    btn.setAttribute("aria-expanded", open);
-    if (open && narrow.matches) {
-      const other = which === "tv" ? "panel" : "tv";
-      PANELS[other].el.hidden = true;
-      PANELS[other].btn.setAttribute("aria-expanded", false);
+    document.body.classList.toggle(HIDDEN_CLASS[which], !open);
+    if (open && narrow.matches) document.body.classList.add(HIDDEN_CLASS[which === "tv" ? "panel" : "tv"]);
+    for (const w in PANELS) { // arrows point the way the panel will move
+      const shut = !isOpen(w), { btn } = PANELS[w], name = w === "tv" ? "the TV Schedule" : "the map settings";
+      btn.textContent = (w === "panel") === shut ? "▶" : "◀";
+      btn.setAttribute("aria-expanded", !shut);
+      btn.setAttribute("aria-label", `${shut ? "Show" : "Hide"} ${name}`);
     }
     if (remember && !narrow.matches) {
       saved[which] = open;
@@ -57,8 +59,7 @@
   }
   setPanel("panel", narrow.matches ? false : saved.panel ?? true, false);
   setPanel("tv", tvParam ? true : narrow.matches ? false : saved.tv ?? innerWidth >= 1280, false);
-  for (const which in PANELS) PANELS[which].btn.addEventListener("click", () => setPanel(which, PANELS[which].el.hidden));
-  document.getElementById("close-tv").addEventListener("click", () => setPanel("tv", false));
+  for (const which in PANELS) PANELS[which].btn.addEventListener("click", () => setPanel(which, !isOpen(which)));
   // the map fills whatever room the panels leave
   new ResizeObserver(() => map.resize()).observe(document.getElementById("map"));
 
@@ -179,7 +180,7 @@
     if (dist === "line") p.set("dist", "line");
     zip = zip || (shown ? shown[0] : ""); // keep an open popup's ZIP in the link
     if (zip) p.set("zip", zip);
-    if (!PANELS.tv.el.hidden) p.set("tv", TV.team || "1");
+    if (isOpen("tv")) p.set("tv", TV.team || "1");
     const h = p.toString().replace(/%2C/g, ",");
     history.replaceState(null, "", h ? `#${h}` : location.pathname + location.search);
   }
@@ -199,14 +200,18 @@
         <span class="name">${t.city} ${t.name}</span>
       </label>
       <span class="count" title="${teamPeople[i].toLocaleString()} people in ${counts[i].toLocaleString()} ZIP codes blacked out">${compact(teamPeople[i])}</span>
-      <button type="button" class="sched" title="${t.name} games in the TV Schedule" aria-label="${t.city} ${t.name} TV Schedule">${CAL_ICON}</button>
-      <button type="button" class="only" title="Show only this team">only</button>`;
+      <button type="button" class="sched" title="Show only the ${t.name}: their blackout area and TV Schedule" aria-label="Show only the ${t.city} ${t.name}">${CAL_ICON}</button>`;
     li.querySelector("input").addEventListener("change", (e) => {
       e.target.checked ? selected.add(t.abbr) : selected.delete(t.abbr);
       update();
     });
-    li.querySelector(".only").addEventListener("click", () => solo(t.abbr));
-    li.querySelector(".sched").addEventListener("click", () => { setPanel("tv", true); TV.show(t.abbr, true); });
+    // just this team: its dots, the map framed on them, and its games in the TV Schedule
+    li.querySelector(".sched").addEventListener("click", () => {
+      solo(t.abbr);
+      zoomToTeam(i);
+      if (!narrow.matches) setPanel("tv", true); // on a phone the panel would cover the map
+      TV.show(t.abbr, isOpen("tv"));
+    });
     list.appendChild(li);
   }
   // "Show ZIPs with no data" toggle, with their numbers in its info popover
@@ -234,6 +239,21 @@
       if (+popLo.value >= +popHi.value) (el === popLo ? (popLo.value = +popHi.value - 1) : (popHi.value = +popLo.value + 1));
       update();
     };
+  }
+
+  // frame a team's blacked-out ZIPs (lower 48 only, so Hawaii doesn't stretch the West Coast
+  // teams' view); Toronto has none, so fall back to its 75-mile territory
+  function zoomToTeam(i) {
+    let w = 180, e = -180, s = 90, n = -90;
+    for (const z of byZip.values()) {
+      if (!Array.isArray(z.idxs) || !z.idxs.includes(i) || z.lon < -125 || z.lat < 24) continue;
+      w = Math.min(w, z.lon); e = Math.max(e, z.lon); s = Math.min(s, z.lat); n = Math.max(n, z.lat);
+    }
+    if (w > e && teams[i].ring) {
+      const [la, lo, mi] = teams[i].ring, dy = mi / 69, dx = mi / (69 * Math.cos((la * Math.PI) / 180));
+      [w, e, s, n] = [lo - dx, lo + dx, la - dy, la + dy];
+    }
+    if (w <= e) map.fitBounds([[w, s], [e, n]], { padding: 40, maxZoom: 8 });
   }
 
   function solo(abbr) {
@@ -513,11 +533,7 @@
     showOnMap: (abbr) => {
       solo(abbr);
       if (narrow.matches) setPanel("tv", false);
-      const t = teams.find((x) => x.abbr === abbr);
-      if (t && t.ring) { // frame its 75-mile territory
-        const [la, lo, mi] = t.ring, dy = mi / 69, dx = mi / (69 * Math.cos((la * Math.PI) / 180));
-        map.fitBounds([[lo - dx, la - dy], [lo + dx, la + dy]], { padding: 40, maxZoom: 8 });
-      }
+      zoomToTeam(teams.findIndex((x) => x.abbr === abbr));
     },
     clearZip: () => popup.remove(),
   });

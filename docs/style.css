@@ -37,20 +37,27 @@ body {
   display: flex; flex-direction: column;
 }
 
-/* top bar: the two panel toggles around the title */
-#topbar {
-  flex: none; display: flex; align-items: center; gap: 12px; padding: 6px 10px;
-  background: var(--panel); border-bottom: 1px solid var(--border);
+/* map settings (left) and TV Schedule (right) beside the map; each slides shut behind a tab on its
+   inner edge (--lw/--rw are the open widths) */
+#layout { flex: 1; min-height: 0; display: flex; position: relative; --lw: 320px; --rw: 440px; }
+#panel, #tv { transition: width .25s ease, padding .25s ease; }
+body.left-hidden #panel { width: 0; padding-left: 0; padding-right: 0; border-right-width: 0; overflow: hidden; }
+body.tv-hidden #tv { width: 0; padding-left: 0; padding-right: 0; border-left-width: 0; overflow: hidden; }
+.edge-toggle {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 6;
+  width: 16px; height: 52px; padding: 0; border: none;
+  background: var(--accent); color: var(--bg); font-size: 11px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: left .25s ease, right .25s ease;
 }
-#topbar h1 { flex: 1; margin: 0; font-size: 16px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.panel-toggle { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; white-space: nowrap; }
-.panel-toggle svg { flex: none; }
-.panel-toggle[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
-#layout { flex: 1; min-height: 0; display: flex; position: relative; }
-#panel[hidden], #tv[hidden] { display: none; }
+.edge-toggle:hover { background: var(--accent); filter: brightness(1.15); }
+#toggle-panel { left: var(--lw); border-radius: 0 4px 4px 0; }
+body.left-hidden #toggle-panel { left: 0; }
+#toggle-tv { right: var(--rw); border-radius: 4px 0 0 4px; }
+body.tv-hidden #toggle-tv { right: 0; }
 
 #panel {
-  width: 320px;
+  width: var(--lw);
   flex: none;
   height: 100%;
   overflow-y: auto;
@@ -61,6 +68,7 @@ body {
 #map { flex: 1; height: 100%; }
 
 h1 { font-size: 18px; margin: 0 0 16px; }
+#panel h1 { min-width: 280px; } /* keeps its lines while the panel slides shut */
 h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0; color: var(--muted); }
 a { color: var(--accent); }
 
@@ -134,10 +142,6 @@ section > h2:first-child { margin-top: 0; }
 #teams .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
 #teams .sched { display: flex; color: var(--muted); padding: 2px; border: 0; background: none; border-radius: 4px; }
 #teams .sched:hover, #teams .sched:focus-visible { color: var(--accent); background: var(--bg); }
-#teams .only {
-  visibility: hidden; padding: 0 6px; font-size: 11px; line-height: 18px;
-}
-#teams li:hover .only, #teams .only:focus { visibility: visible; }
 .toggle { display: flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
 .toggle-row { display: flex; align-items: center; gap: 6px; position: relative; }
 .info summary {
@@ -175,17 +179,15 @@ section > h2:first-child { margin-top: 0; }
 .maplibregl-popup-content .closest { margin-top: 12px; color: #8a8a85; }
 .maplibregl-popup-content .label { color: #8a8a85; }
 
-/* narrow screens: the panels open over the map, one at a time */
+/* narrow screens: the panels open over the map, one at a time, leaving room for their tab */
 @media (max-width: 900px) {
-  #panel, #tv { position: absolute; top: 0; bottom: 0; z-index: 5; width: min(100%, 420px); box-shadow: 0 0 16px rgba(0,0,0,.25); }
+  #layout { --lw: min(calc(100% - 24px), 420px); --rw: min(calc(100% - 24px), 420px); }
+  #panel, #tv { position: absolute; top: 0; bottom: 0; z-index: 5; box-shadow: 0 0 16px rgba(0,0,0,.25); }
+  body.left-hidden #panel, body.tv-hidden #tv { box-shadow: none; }
   #panel { left: 0; }
   #tv { right: 0; }
-  #teams .only { visibility: visible; }
-}
-@media (max-width: 520px) {
-  #topbar h1 { font-size: 14px; }
-  .panel-toggle span { display: none; }
-  #topbar h1 { text-align: left; }
+  /* one panel at a time: the other's tab steps aside while one is open */
+  body:not(.tv-hidden) #toggle-panel, body:not(.left-hidden) #toggle-tv { display: none; }
 }
 
 /* MapLibre styles control buttons as display:block; center the icon in both directions */
