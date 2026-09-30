@@ -29,6 +29,39 @@
     },
     onRemove() {},
   }, "top-right");
+  // ---- panels: map settings on the left, TV Schedule on the right; each can be hidden ----
+  // Open/closed is remembered per browser; a link with tv=... opens the TV Schedule.
+  const narrow = matchMedia("(max-width: 900px)"); // panels overlay the map, one at a time
+  const tvParam = new URLSearchParams(location.hash.slice(1)).get("tv");
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem("panels")) || {}; } catch (e) {}
+  const PANELS = {
+    panel: { el: document.getElementById("panel"), btn: document.getElementById("toggle-panel") },
+    tv: { el: document.getElementById("tv"), btn: document.getElementById("toggle-tv") },
+  };
+  let afterPanels = () => {}; // set once the hash can be written
+  function setPanel(which, open, remember = true) {
+    const { el, btn } = PANELS[which];
+    el.hidden = !open;
+    btn.setAttribute("aria-expanded", open);
+    if (open && narrow.matches) {
+      const other = which === "tv" ? "panel" : "tv";
+      PANELS[other].el.hidden = true;
+      PANELS[other].btn.setAttribute("aria-expanded", false);
+    }
+    if (remember && !narrow.matches) {
+      saved[which] = open;
+      try { localStorage.setItem("panels", JSON.stringify(saved)); } catch (e) {}
+    }
+    afterPanels();
+  }
+  setPanel("panel", narrow.matches ? false : saved.panel ?? true, false);
+  setPanel("tv", tvParam ? true : narrow.matches ? false : saved.tv ?? innerWidth >= 1280, false);
+  for (const which in PANELS) PANELS[which].btn.addEventListener("click", () => setPanel(which, PANELS[which].el.hidden));
+  document.getElementById("close-tv").addEventListener("click", () => setPanel("tv", false));
+  // the map fills whatever room the panels leave
+  new ResizeObserver(() => map.resize()).observe(document.getElementById("map"));
+
   // listen before awaiting the data, or a fast basemap can fire "load" before we're listening
   const mapLoaded = new Promise((resolve) => map.once("load", resolve));
 
@@ -146,6 +179,7 @@
     if (dist === "line") p.set("dist", "line");
     zip = zip || (shown ? shown[0] : ""); // keep an open popup's ZIP in the link
     if (zip) p.set("zip", zip);
+    if (!PANELS.tv.el.hidden) p.set("tv", TV.team || "1");
     const h = p.toString().replace(/%2C/g, ",");
     history.replaceState(null, "", h ? `#${h}` : location.pathname + location.search);
   }
@@ -165,13 +199,14 @@
         <span class="name">${t.city} ${t.name}</span>
       </label>
       <span class="count" title="${teamPeople[i].toLocaleString()} people in ${counts[i].toLocaleString()} ZIP codes blacked out">${compact(teamPeople[i])}</span>
-      <a class="sched" href="schedule.html#team=${t.abbr}" title="${t.name} games and national TV blackouts" aria-label="${t.city} ${t.name} schedule">${CAL_ICON}</a>
+      <button type="button" class="sched" title="${t.name} games in the TV Schedule" aria-label="${t.city} ${t.name} TV Schedule">${CAL_ICON}</button>
       <button type="button" class="only" title="Show only this team">only</button>`;
     li.querySelector("input").addEventListener("change", (e) => {
       e.target.checked ? selected.add(t.abbr) : selected.delete(t.abbr);
       update();
     });
     li.querySelector(".only").addEventListener("click", () => solo(t.abbr));
+    li.querySelector(".sched").addEventListener("click", () => { setPanel("tv", true); TV.show(t.abbr, true); });
     list.appendChild(li);
   }
   // "Show ZIPs with no data" toggle, with their numbers in its info popover
@@ -439,6 +474,7 @@
     map.flyTo({ center: [z.lon, z.lat], zoom: 9 });
     popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip, z, note)).addTo(map);
     shown = [zip, z, note]; // after addTo, whose "close" of the previous popup clears it
+    tvZip(zip, z);
     writeHash(zip);
     return true;
   }
@@ -447,7 +483,17 @@
     const z = byZip.get(zip);
     popup.setLngLat([z.lon, z.lat]).setHTML(describe(zip)).addTo(map);
     shown = [zip, z, postCensusNote(zip)]; // after addTo, whose "close" of the previous popup clears it
+    tvZip(zip, z);
     highlight(zip);
+  }
+  // the TV Schedule counts games from the last ZIP picked (its local blackouts; none known if no data)
+  function tvZip(zip, z) {
+    const st = z.place ? z.place.slice(z.place.lastIndexOf(", ") + 2) : "";
+    TV.setZip({
+      zip,
+      name: z.place ? `${z.place.slice(0, z.place.lastIndexOf(", "))}, ${st} ${zip}` : `ZIP ${zip}`,
+      local: Array.isArray(z.idxs) && z.idxs.length ? z.idxs.map((i) => teams[i].abbr) : null,
+    });
   }
 
   // the ZIP whose popup is open gets a ring, and its dot is drawn even when the
@@ -458,6 +504,24 @@
     if (map.getLayer("zips-searched")) update();
   }
   popup.on("close", () => { shown = null; highlight(""); });
+
+  // ---- TV Schedule panel ----
+  TV.init({
+    team: /^[A-Z]{3}$/.test(tvParam || "") ? tvParam : null,
+    change: () => writeHash(),
+    // show the team's blackout area; on a narrow screen, get the panel out of the way
+    showOnMap: (abbr) => {
+      solo(abbr);
+      if (narrow.matches) setPanel("tv", false);
+      const t = teams.find((x) => x.abbr === abbr);
+      if (t && t.ring) { // frame its 75-mile territory
+        const [la, lo, mi] = t.ring, dy = mi / 69, dx = mi / (69 * Math.cos((la * Math.PI) / 180));
+        map.fitBounds([[lo - dx, la - dy], [lo + dx, la + dy]], { padding: 40, maxZoom: 8 });
+      }
+    },
+    clearZip: () => popup.remove(),
+  });
+  afterPanels = () => writeHash();
 
   const result = document.getElementById("search-result");
   async function search(zip, fly = true) {
