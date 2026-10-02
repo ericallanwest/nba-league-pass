@@ -99,6 +99,14 @@ window.TV = (function () {
     return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
   };
   const tag = (label) => label.replace(/^(Emirates|AWS) /, "").replace(/ (East|West) Group [A-C]$/, "");
+  // the label's full name, plus what it means where the schedule makes that plain
+  function about(label) {
+    let m;
+    if (/NBA Cup .*Group/.test(label)) return `${label}: an NBA Cup group-stage game, which also counts in the 82`;
+    if ((m = label.match(/NBA Cup (Quarterfinal|Semifinal)/))) return `${label}: an NBA Cup knockout game, which also counts in the 82`;
+    if ((m = label.match(/^NBA (.+) Game$/))) return `${label}: a regular-season game played in ${m[1]}`;
+    return label;
+  }
 
   function renderGames() {
     const r = rows.find((x) => x.abbr === team);
@@ -127,7 +135,7 @@ window.TV = (function () {
           : `<span class="net">${cat === "nbatv" ? "NBA TV" : "League Pass"}</span>`;
         return `<tr class="${out ? "out" : "live"}${NATIONAL.some((c) => c.key === cat) ? " natl" : ""}">
           <td class="date">${fmtDate(date)}</td>
-          <td class="opp">${atHome ? "vs" : "@"} <b>${opp}</b>${label ? ` <span class="tag">${esc(tag(label))}</span>` : ""}</td>
+          <td class="opp">${atHome ? "vs" : "@"} <b>${opp}</b>${label ? ` <span class="tag" data-tip="${esc(about(label))}">${esc(tag(label))}</span>` : ""}</td>
           <td class="time">${fmtTime(time)}</td>
           <td class="status">${status}</td></tr>`;
       }).join("");
@@ -160,20 +168,23 @@ window.TV = (function () {
     $("only-out").addEventListener("change", () => $("games-table").classList.toggle("out-only", $("only-out").checked));
     render();
 
-    // tooltip: hover on desktop, tap on touch
-    const tip = $("tip"), chart = $("team-bar");
+    // tooltips for the bar's segments and the games' full labels (NBA Cup group, Rivals Week, ...):
+    // hover on desktop, tap on touch
+    const tip = $("tip");
     function tipAt(e) {
-      const seg = e.target.closest(".seg");
-      if (!seg) { tip.hidden = true; return; }
-      tip.textContent = seg.dataset.tip;
+      const el = e.target.closest(".seg, .tag");
+      if (!el) { tip.hidden = true; return; }
+      tip.textContent = el.dataset.tip;
       tip.hidden = false;
       const x = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8);
       tip.style.left = `${Math.max(8, x)}px`;
       tip.style.top = `${e.clientY + 14}px`;
     }
-    chart.addEventListener("pointermove", tipAt);
-    chart.addEventListener("pointerdown", tipAt);
-    chart.addEventListener("pointerleave", () => (tip.hidden = true));
+    for (const el of [$("team-bar"), $("games-table")]) {
+      el.addEventListener("pointermove", tipAt);
+      el.addEventListener("pointerdown", tipAt);
+      el.addEventListener("pointerleave", () => (tip.hidden = true));
+    }
     $("tv").addEventListener("scroll", () => (tip.hidden = true), { passive: true });
   }
 
