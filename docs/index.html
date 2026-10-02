@@ -133,41 +133,25 @@
     </p>
     <p id="tv-context"></p>
 
-    <div class="segmented" id="sort" role="radiogroup" aria-label="Sort teams">
-      <label><input type="radio" name="sort" value="national" checked><span>Most blackouts</span></label>
-      <label><input type="radio" name="sort" value="fewest"><span>Fewest</span></label>
-      <label><input type="radio" name="sort" value="team"><span>Team</span></label>
-    </div>
-
-    <ul class="legend" id="legend"></ul>
-
-    <div class="chart" id="chart" role="table" aria-label="Games per team by where they can be watched live">
-      <div class="chart-head" role="row">
-        <span role="columnheader">Team</span>
-        <span role="columnheader">82 games</span>
-        <span role="columnheader" class="num">Live</span>
-      </div>
-    </div>
-    <p id="league" class="muted"></p>
-
-    <section id="games">
+    <section id="games" hidden>
       <div class="games-head">
-        <h3 id="games-title">Game by game</h3>
+        <h3 id="games-title"></h3>
         <select id="team-pick" aria-label="Team"><option value="">Choose a team…</option></select>
       </div>
+      <ul class="legend" id="legend"></ul>
+      <div class="team-bar" id="team-bar" role="img"></div>
       <p id="games-sum" class="muted"></p>
-      <div id="games-body" hidden>
-        <div class="games-tools">
-          <label class="only-out"><input type="checkbox" id="only-out"> Blacked-out games only</label>
-          <button type="button" id="show-on-map" hidden>Show on map</button>
-        </div>
-        <table id="games-table">
-          <colgroup><col class="c-date"><col class="c-opp"><col class="c-time"><col class="c-lp"></colgroup>
-          <thead><tr><th>Date</th><th>Opp.</th><th>ET</th><th>League Pass</th></tr></thead>
-          <tbody></tbody>
-        </table>
+      <div class="games-tools">
+        <label class="only-out"><input type="checkbox" id="only-out"> Blacked-out games only</label>
+        <button type="button" id="show-on-map">Show on map</button>
       </div>
+      <table id="games-table">
+        <colgroup><col class="c-date"><col class="c-opp"><col class="c-time"><col class="c-lp"></colgroup>
+        <thead><tr><th>Date</th><th>Opp.</th><th>ET</th><th>League Pass</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </section>
+    <p id="games-none" class="muted">Pick a team on the map, or with a calendar icon in the team list.</p>
 
     <details id="tv-notes">
       <summary>Notes &amp; sources</summary>

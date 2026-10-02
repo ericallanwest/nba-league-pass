@@ -21,28 +21,16 @@
 button.link { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; font: inherit; cursor: pointer; }
 #tv .lede { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
 #tv-context { margin: 0 0 12px; padding: 8px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); font-size: 13px; }
-#tv #sort { margin-bottom: 10px; }
 
 .legend { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; }
 .legend li { display: flex; align-items: center; gap: 5px; }
 .legend .sep { width: 1px; height: 14px; background: var(--border); }
-.legend .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; --team: var(--accent); }
+.legend .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 
-.chart { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: 8px; }
-.chart-head, .chart-row { display: contents; }
-.chart-head span { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding-bottom: 4px; border-bottom: 1px solid var(--border); margin-bottom: 3px; }
-.chart-head .num { text-align: right; }
-.chart-row > * { padding: 2px 0; display: flex; align-items: center; cursor: pointer; }
-.chart-row .team { border: 0; background: none; padding: 2px 4px 2px 0; font: inherit; color: var(--text); border-radius: 0; }
-.chart-row .abbr { font-weight: 700; }
-.chart-row:hover > * { background: var(--hover); }
-.chart-row.sel > * { background: var(--hover); }
-.chart-row.sel .abbr { color: var(--accent); }
-.num { justify-content: flex-end; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.bar { gap: 1px; }
+.team-bar { display: flex; gap: 1px; margin: 4px 0 6px; }
 .seg {
-  height: 18px; min-width: 2px; display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--seg-text-light);
+  height: 26px; min-width: 2px; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--seg-text-light);
 }
 .seg.small { font-size: 0; }
 .seg:first-child { border-radius: 3px 0 0 3px; }
@@ -65,9 +53,9 @@ button.link { border: 0; background: none; padding: 0; color: var(--accent); tex
 :root[data-theme="dark"] .seg-abc, :root[data-theme="dark"] .seg-espn { color: var(--seg-text-dark); }
 :root[data-theme="dark"] .seg-peacock, :root[data-theme="dark"] .seg-prime { color: var(--seg-text-light); }
 
-#league { margin: 10px 0 0; font-size: 12px; }
 
-#games { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 12px; scroll-margin-top: 4px; }
+#games { margin-top: 4px; }
+#games-none { margin: 4px 0 0; font-size: 13px; }
 .games-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
 #games-title { font-size: 15px; margin: 0; }
 #team-pick { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); max-width: 100%; }

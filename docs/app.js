@@ -210,7 +210,7 @@
       solo(t.abbr);
       zoomToTeam(i);
       if (!narrow.matches) setPanel("tv", true); // on a phone the panel would cover the map
-      TV.show(t.abbr, isOpen("tv"));
+      TV.show(t.abbr);
     });
     list.appendChild(li);
   }
@@ -264,10 +264,15 @@
   // arena marker clicks: from the all-teams view, show just that team; after that each click
   // adds or removes one team, so several can be picked (or dropped) on the map. Removing the
   // last one goes back to all teams rather than an empty map.
+  // The TV Schedule follows the most recently picked team.
   function toggleTeam(abbr) {
-    if (selected.size === teams.length) return solo(abbr);
+    if (selected.size === teams.length) {
+      TV.show(abbr);
+      return solo(abbr);
+    }
     selected.has(abbr) ? selected.delete(abbr) : selected.add(abbr);
     if (!selected.size) selected = new Set(teams.map((t) => t.abbr));
+    if (selected.has(abbr) && selected.size < teams.length) TV.show(abbr);
     update();
   }
 
