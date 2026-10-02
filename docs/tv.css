@@ -70,7 +70,7 @@ button.link { border: 0; background: none; padding: 0; color: var(--accent); tex
 #games-table td { padding: 4px 5px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #games-table td.status { white-space: normal; }
 #games-table .wd { display: none; }
-#games-table .tag { font-size: 10px; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 3px; margin-left: 3px; }
+#games-table .tag { cursor: help; font-size: 10px; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 3px; margin-left: 3px; }
 #games-table tr.out td { background: var(--hover); color: var(--muted); }
 #games-table tr.out .opp b { color: var(--text); }
 #games-table.out-only tr:not(.natl) { display: none; }
