@@ -2,11 +2,11 @@
 OpenRouteService Matrix API, writing data/drive_times.csv.
 
 For each ZIP, the 6 arenas closest in a straight line are routed, and the 5
-shortest drives are kept. The free plan's daily quota counts routes (each ZIP x
-arena pair; about 170,000 a day), not requests, so each request holds only ZIPs
-with the same candidate arenas: no pair is routed that nobody needs. That's
-about 6 routes per ZIP, so all ~33,000 ZIPs take about 200,000 routes: two days
-from scratch, and a daily run keeps up after that.
+shortest drives are kept. The free plan's matrix quota is about 50 requests a
+day (ORS reports "limit 50"), each up to 3,500 routes, so every request is packed
+full: neighbouring ZIPs against the union of their candidate arenas. That fits
+roughly 350 ZIPs per request, so all ~33,000 ZIPs take about two days from
+scratch, and a daily run keeps up after that.
 
 Usage (needs a free key from openrouteservice.org):
     ORS_API_KEY=... python scripts/drive_times.py [--max-requests 450]
@@ -24,7 +24,7 @@ To make the most of the quota:
   whole request;
 - when a request is still rejected, the ZIP ORS names is dropped and the rest
   retried (one extra request), instead of splitting the batch in half repeatedly;
-- the most populated ZIPs go first, so a run cut short covers the most people.
+- ZIPs are ordered by their nearest arenas so each request's arena list stays short.
 """
 import argparse
 import csv
@@ -48,8 +48,6 @@ MAX_ROUTES = 3500     # ORS limit on sources x destinations per request
 SNAP_CHUNK = 1000     # points per snap request; a failed one is retried in halves down to SNAP_MIN
 SNAP_MIN = 125
 SNAP_RADIUS = 5000    # meters to look for a road around a ZIP's point
-# population tiers, routed in this order (within a tier, ZIPs are grouped by candidate arenas)
-POP_TIERS = (25000, 10000, 2500, 500, 0)
 # no road connection to any arena
 NO_DRIVE_STATES = {"AK", "HI", "PR", "VI", "GU", "AS", "MP"}
 
@@ -237,25 +235,25 @@ def check_arenas(matrix, teams):
 
 
 def batches(todo):
-    """Group ZIPs (already sorted by tier, then candidate arenas) so each request holds
-    only ZIPs with the same candidate arenas, up to MAX_ROUTES. ORS counts every
-    ZIP x arena pair in a request against the daily quota, so a request mixing
-    candidate sets would route pairs nobody needs; the extra requests are cheap."""
-    batch, key = [], None
+    """Fill each request with up to MAX_ROUTES routes: consecutive ZIPs (sorted so
+    neighbours share candidate arenas) against the union of their candidates. The
+    daily quota counts requests (about 50 a day on the free plan), not routes, so
+    the extra pairs a shared arena list routes cost nothing."""
+    batch, arenas = [], set()
     for z in todo:
-        k = (z["tier"], tuple(sorted(z["cands"])))
-        if batch and (k != key or (len(batch) + 1) * len(z["cands"]) > MAX_ROUTES):
+        union = arenas | set(z["cands"])
+        if batch and (len(batch) + 1) * len(union) > MAX_ROUTES:
             yield batch
-            batch = []
+            batch, union = [], set(z["cands"])
         batch.append(z)
-        key = k
+        arenas = union
     if batch:
         yield batch
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--max-requests", type=int, default=450, help="stop after this many API calls (free plan: 500/day)")
+    ap.add_argument("--max-requests", type=int, default=450, help="stop after this many API calls (ORS stops the run itself at its daily quota)")
     ap.add_argument("--pause", type=float, default=1.6, help="seconds between calls (free plan: 40/minute)")
     ap.add_argument("--check-arenas", action="store_true", help="only check that every arena is reachable")
     args = ap.parse_args()
@@ -268,8 +266,6 @@ def main():
         # route to a point on a public road by the arena when the arena's own point doesn't snap to one
         t["route"] = [float(t["route_lon"]), float(t["route_lat"])] if t.get("route_lat") else [t["lon"], t["lat"]]
     states = {r["zip"]: r["state"] for r in read_csv("zcta_places.csv")}
-    population = {r["zip"]: int(r["population"]) for r in read_csv("zcta_population.csv")
-                  if r["population"].lstrip("-").isdigit()}
     done = set()
     if os.path.exists(OUT):
         # rows without driving distance (the older ABBR:minutes form) get routed again
@@ -285,11 +281,11 @@ def main():
             continue
         lat, lon = float(r["lat"]), float(r["lon"])
         by_dist = sorted(range(len(teams)), key=lambda i: miles(lat, lon, teams[i]["lat"], teams[i]["lon"]))
-        todo.append({"zip": r["zip"], "lat": lat, "lon": lon, "cands": by_dist[:CANDIDATES],
-                     "tier": next(i for i, t in enumerate(POP_TIERS) if population.get(r["zip"], 0) >= t)})
-    # most populated first; within a tier, ZIPs with the same candidate arenas share
-    # requests with no wasted routes
-    todo.sort(key=lambda z: (z["tier"], sorted(z["cands"]), z["lat"]))
+        todo.append({"zip": r["zip"], "lat": lat, "lon": lon, "cands": by_dist[:CANDIDATES]})
+    # by nearest arenas, so a request's ZIPs share most of their candidates and it
+    # holds as many ZIPs as it can (this beats routing the populous ZIPs first now
+    # that a day's 50 requests cover nearly every ZIP)
+    todo.sort(key=lambda z: (z["cands"][:2], z["lat"]))
     print(f"{len(done)} done, {len(skipped)} with no road route, {len(todo)} to route", file=sys.stderr)
 
     new_file = not os.path.exists(OUT)
