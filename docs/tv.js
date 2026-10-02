@@ -23,7 +23,7 @@ window.TV = (function () {
   let data, rows = [];
   let team = null; // team whose games are listed
   let zip = null; // { zip, name, local: [abbr] | null } from the map, or null for "outside every local area"
-  let hooks = { change() {}, showOnMap() {}, clearZip() {} };
+  let hooks = { change() {}, clearZip() {} };
 
   const $ = (id) => document.getElementById(id);
   const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -82,7 +82,7 @@ window.TV = (function () {
     }
     const note = zip.local === null ? " NBA.com has no local blackout data for this ZIP."
       : zip.local.length ? ` Local blackouts: ${zip.local.map((a) => data.teams[a].name).join(", ")}.` : " No local blackouts.";
-    ctx.innerHTML = `Live from <b>${esc(zip.name)}</b>.${note} <button type="button" class="link" id="tv-clear-zip">Clear ZIP</button>`;
+    ctx.innerHTML = `<b>${esc(zip.name)}</b>.${note} <button type="button" class="link" id="tv-clear-zip">Clear ZIP</button>`;
     $("tv-clear-zip").onclick = () => { setZip(null); hooks.clearZip(); };
   }
 
@@ -102,7 +102,6 @@ window.TV = (function () {
 
   function renderGames() {
     const r = rows.find((x) => x.abbr === team);
-    $("team-pick").value = r ? team : "";
     $("games").hidden = !r;
     $("games-none").hidden = !!r;
     if (!r) return;
@@ -119,14 +118,14 @@ window.TV = (function () {
         const atHome = home === team, opp = atHome ? away : home, o = data.teams[opp];
         const cat = category(away, home, nat);
         const out = !IS_LIVE[cat];
-        // ✅ watchable on League Pass (noting NBA TV), ❌ not, with the network or local team to blame
+        // 🏀 watchable on League Pass (noting NBA TV), 📺 not, with the network or local team to blame
         const why = cat === "local"
           ? `Local (${[away, home].filter((a) => local().includes(a)).map((a) => data.teams[a].name).join(" / ")})`
           : nat.filter((n) => n !== "NBA TV" && n !== "Telemundo").join(" / ");
         const status = out
-          ? `<span role="img" aria-label="Blacked out">❌</span> <span class="net">${esc(why)}</span>`
-          : `<span role="img" aria-label="Live on League Pass">✅</span>${cat === "nbatv" ? ' <span class="net">(NBA TV)</span>' : ""}`;
-        return `<tr class="${out ? "out" : "live"}">
+          ? `<span role="img" aria-label="Blacked out">📺</span> <span class="net">${esc(why)}</span>`
+          : `<span role="img" aria-label="Live">🏀</span> <span class="net">${cat === "nbatv" ? "NBA TV" : "League Pass"}</span>`;
+        return `<tr class="${out ? "out" : "live"}${NATIONAL.some((c) => c.key === cat) ? " natl" : ""}">
           <td class="date">${fmtDate(date)}</td>
           <td class="opp">${atHome ? "vs" : "@"} <b>${opp}</b>${label ? ` <span class="tag">${esc(tag(label))}</span>` : ""}</td>
           <td class="time">${fmtTime(time)}</td>
@@ -158,13 +157,7 @@ window.TV = (function () {
     team = opts.team || team;
     data = await (await fetch("data/schedule.json")).json();
     if (team && !(team in data.teams)) team = null;
-    const pick = $("team-pick");
-    for (const [abbr, t] of Object.entries(data.teams).sort((a, b) => (a[1].city + a[1].name).localeCompare(b[1].city + b[1].name))) {
-      pick.add(new Option(`${t.city} ${t.name}`, abbr));
-    }
-    pick.addEventListener("change", () => show(pick.value));
     $("only-out").addEventListener("change", () => $("games-table").classList.toggle("out-only", $("only-out").checked));
-    $("show-on-map").addEventListener("click", () => team && hooks.showOnMap(team));
     render();
 
     // tooltip: hover on desktop, tap on touch

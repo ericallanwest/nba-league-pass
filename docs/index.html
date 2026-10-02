@@ -129,25 +129,22 @@
     <p class="lede">
       League Pass doesn't show live games on ESPN, ABC, NBC, Peacock or Prime Video anywhere in the US,
       so how many of a team's 82 games you can watch depends on how often it plays on national TV.
-      NBA TV games stay on League Pass.
     </p>
     <p id="tv-context"></p>
 
     <section id="games" hidden>
       <div class="games-head">
         <h3 id="games-title"></h3>
-        <select id="team-pick" aria-label="Team"><option value="">Choose a team…</option></select>
       </div>
       <ul class="legend" id="legend"></ul>
       <div class="team-bar" id="team-bar" role="img"></div>
       <p id="games-sum" class="muted"></p>
       <div class="games-tools">
-        <label class="only-out"><input type="checkbox" id="only-out"> Blacked-out games only</label>
-        <button type="button" id="show-on-map">Show on map</button>
+        <label class="only-out"><input type="checkbox" id="only-out"> National TV games only</label>
       </div>
       <table id="games-table">
         <colgroup><col class="c-date"><col class="c-opp"><col class="c-time"><col class="c-lp"></colgroup>
-        <thead><tr><th>Date</th><th>Opp.</th><th>ET</th><th>League Pass</th></tr></thead>
+        <thead><tr><th>Date</th><th>Opp.</th><th>ET</th><th>Network</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>

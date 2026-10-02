@@ -534,12 +534,6 @@
   TV.init({
     team: /^[A-Z]{3}$/.test(tvParam || "") ? tvParam : null,
     change: () => writeHash(),
-    // show the team's blackout area; on a narrow screen, get the panel out of the way
-    showOnMap: (abbr) => {
-      solo(abbr);
-      if (narrow.matches) setPanel("tv", false);
-      zoomToTeam(teams.findIndex((x) => x.abbr === abbr));
-    },
     clearZip: () => popup.remove(),
   });
   afterPanels = () => writeHash();
