@@ -1,5 +1,6 @@
-// TV Schedule panel: each team's 82 games split into live on League Pass vs blacked out, for a viewer
-// outside every team's local area or, once a ZIP is picked on the map, for that ZIP. Data:
+// TV Schedule panel: the picked team's 82 games, as one bar (live on League Pass vs blacked out, by
+// network) over a game-by-game table, for a viewer outside every team's local area or, once a ZIP is
+// picked on the map, for that ZIP. Data:
 // data/schedule.json, built by scripts/fetch_schedule.py. The map (app.js) drives it through window.TV.
 window.TV = (function () {
   const GAMES = 82;
@@ -19,10 +20,9 @@ window.TV = (function () {
   const NATIONAL = CATS.filter((c) => c.nets);
   const IS_LIVE = Object.fromEntries(CATS.map((c) => [c.key, !!c.live]));
 
-  let data, rows = [], els = new Map();
+  let data, rows = [];
   let team = null; // team whose games are listed
   let zip = null; // { zip, name, local: [abbr] | null } from the map, or null for "outside every local area"
-  let sortBy = "national";
   let hooks = { change() {}, showOnMap() {}, clearZip() {} };
 
   const $ = (id) => document.getElementById(id);
@@ -52,79 +52,38 @@ window.TV = (function () {
     });
   }
 
-  function renderLegend() {
-    const legend = $("legend");
-    legend.innerHTML = "";
-    for (const cat of CATS) {
-      if (cat.key === "tbd" && !rows.some((r) => r.c.tbd)) continue;
-      if (cat.key === "local" && !local().length) continue;
-      legend.insertAdjacentHTML("beforeend", `<li><span class="sw seg-${cat.key}"></span>${cat.label}</li>`);
-      if (cat.key === "nbatv") legend.insertAdjacentHTML("beforeend", '<li class="sep" aria-hidden="true"></li>');
-    }
+  // the categories in this team's bar, in bar order, with a divider between live and blacked out
+  function renderLegend(r) {
+    const cats = CATS.filter((cat) => r.c[cat.key]);
+    $("legend").innerHTML = cats.map((cat, i) =>
+      (i && cats[i - 1].live && !cat.live ? '<li class="sep" aria-hidden="true"></li>' : "") +
+      `<li><span class="sw seg-${cat.key}"></span>${cat.label}</li>`).join("");
   }
 
-  function renderChart() {
-    const chart = $("chart");
-    for (const el of els.values()) el.remove();
-    els = new Map();
-    for (const r of rows) {
-      const row = document.createElement("div");
-      row.className = "chart-row";
-      row.setAttribute("role", "row");
-      row.style.setProperty("--team", r.team.color);
-      const bar = CATS.filter((cat) => r.c[cat.key]).map((cat) => {
-        const n = r.c[cat.key];
-        const what = cat.key === "lp" ? "live on League Pass" : cat.key === "nbatv" ? "live on NBA TV (and League Pass)"
-          : cat.key === "tbd" ? "NBA Cup week, not yet scheduled"
-          : cat.key === "local" ? `blacked out locally in ${zip.zip}` : `on ${cat.label}, blacked out`;
-        return `<span class="seg seg-${cat.key}${n < 5 ? " small" : ""}" style="flex:${n}" data-tip="${esc(`${r.team.city} ${r.team.name}: ${n} game${n === 1 ? "" : "s"} ${what}`)}">${n >= 3 ? n : ""}</span>`;
-      }).join("");
-      row.innerHTML = `
-        <button type="button" class="team" role="cell" title="${esc(`${r.team.city} ${r.team.name}: game by game`)}"><span class="abbr">${r.abbr}</span></button>
-        <span class="bar" role="cell" aria-label="${r.live} live, ${r.blackout} blacked out${r.c.tbd ? `, ${r.c.tbd} not yet scheduled` : ""}">${bar}</span>
-        <span class="num" role="cell"><b>${r.live}</b></span>`;
-      row.addEventListener("click", () => show(r.abbr, true));
-      els.set(r.abbr, row);
-      chart.append(row);
-    }
-    sort();
-    for (const [a, el] of els) el.classList.toggle("sel", a === team);
-  }
-
-  function sort() {
-    const key = zip ? "blackout" : "national";
-    const sorted = [...rows].sort(sortBy === "team"
-      ? (a, b) => (a.team.city + a.team.name).localeCompare(b.team.city + b.team.name)
-      : (a, b) => (sortBy === "national" ? b[key] - a[key] || a.live - b.live : a[key] - b[key] || b.live - a.live) || a.abbr.localeCompare(b.abbr));
-    for (const r of sorted) $("chart").append(els.get(r.abbr));
+  function renderBar(r) {
+    const bar = $("team-bar");
+    bar.style.setProperty("--team", r.team.color);
+    bar.setAttribute("aria-label", `${r.live} of ${GAMES} games live on League Pass, ${r.blackout} blacked out` +
+      (r.c.tbd ? `, ${r.c.tbd} not yet scheduled` : ""));
+    bar.innerHTML = CATS.filter((cat) => r.c[cat.key]).map((cat) => {
+      const n = r.c[cat.key];
+      const what = cat.key === "lp" ? "live on League Pass" : cat.key === "nbatv" ? "live on NBA TV (and League Pass)"
+        : cat.key === "tbd" ? "NBA Cup week, not yet scheduled"
+        : cat.key === "local" ? `blacked out locally in ${zip.zip}` : `on ${cat.label}, blacked out`;
+      return `<span class="seg seg-${cat.key}${n < 3 ? " small" : ""}" style="flex:${n}" data-tip="${esc(`${n} game${n === 1 ? "" : "s"} ${what}`)}">${n}</span>`;
+    }).join("");
   }
 
   function renderContext() {
     const ctx = $("tv-context");
     if (!zip) {
       ctx.innerHTML = "For a viewer outside every team's local area. <span class=\"muted\">Pick a ZIP on the map to add its local blackouts.</span>";
-      $("league").textContent = summaryLine();
       return;
     }
-    const where = `${esc(zip.name)}`;
     const note = zip.local === null ? " NBA.com has no local blackout data for this ZIP."
       : zip.local.length ? ` Local blackouts: ${zip.local.map((a) => data.teams[a].name).join(", ")}.` : " No local blackouts.";
-    ctx.innerHTML = `Live from <b>${where}</b>.${note} <button type="button" class="link" id="tv-clear-zip">Clear ZIP</button>`;
+    ctx.innerHTML = `Live from <b>${esc(zip.name)}</b>.${note} <button type="button" class="link" id="tv-clear-zip">Clear ZIP</button>`;
     $("tv-clear-zip").onclick = () => { setZip(null); hooks.clearZip(); };
-    $("league").textContent = summaryLine();
-  }
-
-  function summaryLine() {
-    let national = 0, scheduled = 0;
-    for (const [, , , away, home, nat] of data.games) {
-      if (!(away in data.teams && home in data.teams)) continue;
-      scheduled++;
-      if (NATIONAL.some((c) => nat.some((n) => c.nets.includes(n)))) national++;
-    }
-    const hi = Math.max(...rows.map((r) => r.national)), lo = Math.min(...rows.map((r) => r.national));
-    const who = (n) => rows.filter((r) => r.national === n).map((r) => r.abbr).sort().join(", ");
-    return `${data.season}: ${national} of ${scheduled.toLocaleString()} scheduled games are on national TV, ` +
-      `from ${lo} per team (${who(lo)}) to ${hi} (${who(hi)}).`;
   }
 
   // ---- game-by-game table ----
@@ -143,18 +102,15 @@ window.TV = (function () {
 
   function renderGames() {
     const r = rows.find((x) => x.abbr === team);
-    for (const [a, el] of els) el.classList.toggle("sel", a === team);
     $("team-pick").value = r ? team : "";
-    $("games-body").hidden = !r;
-    $("games-title").textContent = r ? `${r.team.city} ${r.team.name}` : "Game by game";
-    $("show-on-map").hidden = !r;
-    const sum = $("games-sum");
-    if (!r) {
-      sum.textContent = "Click a team in the chart, or choose one here, to see which of its games are blacked out.";
-      return;
-    }
+    $("games").hidden = !r;
+    $("games-none").hidden = !!r;
+    if (!r) return;
+    $("games-title").textContent = `${r.team.city} ${r.team.name}`;
     $("games").style.setProperty("--team", r.team.color);
-    sum.innerHTML = `<b>${r.live}</b> live on League Pass` +
+    renderLegend(r);
+    renderBar(r);
+    $("games-sum").innerHTML = `<b>${r.live}</b> of ${GAMES} live on League Pass` +
       (r.c.local ? `, <b>${r.c.local}</b> blacked out locally` : "") +
       `, <b>${r.national}</b> on national TV` +
       (r.c.tbd ? `, ${r.c.tbd} NBA Cup game${r.c.tbd === 1 ? "" : "s"} not yet scheduled` : "") + ".";
@@ -181,19 +137,16 @@ window.TV = (function () {
 
   function render() {
     tally();
-    renderLegend();
-    renderChart();
     renderContext();
     renderGames();
   }
 
   // ---- public ----
-  function show(abbr, scroll) {
-    team = abbr && data && abbr in data.teams ? abbr : null;
+  function show(abbr) {
+    team = abbr && (!data || abbr in data.teams) ? abbr : null; // before the data loads, kept for init
     if (!data) return;
     renderGames();
     hooks.change(team);
-    if (scroll && team) $("games").scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function setZip(z) {
     zip = z;
@@ -202,23 +155,20 @@ window.TV = (function () {
 
   async function init(opts) {
     hooks = { ...hooks, ...opts };
-    team = opts.team || null;
+    team = opts.team || team;
     data = await (await fetch("data/schedule.json")).json();
     if (team && !(team in data.teams)) team = null;
     const pick = $("team-pick");
     for (const [abbr, t] of Object.entries(data.teams).sort((a, b) => (a[1].city + a[1].name).localeCompare(b[1].city + b[1].name))) {
       pick.add(new Option(`${t.city} ${t.name}`, abbr));
     }
-    pick.addEventListener("change", () => show(pick.value, false));
+    pick.addEventListener("change", () => show(pick.value));
     $("only-out").addEventListener("change", () => $("games-table").classList.toggle("out-only", $("only-out").checked));
     $("show-on-map").addEventListener("click", () => team && hooks.showOnMap(team));
-    for (const input of document.querySelectorAll("#sort input")) {
-      input.addEventListener("change", () => { sortBy = input.value; sort(); });
-    }
     render();
 
     // tooltip: hover on desktop, tap on touch
-    const tip = $("tip"), chart = $("chart");
+    const tip = $("tip"), chart = $("team-bar");
     function tipAt(e) {
       const seg = e.target.closest(".seg");
       if (!seg) { tip.hidden = true; return; }
