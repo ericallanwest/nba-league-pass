@@ -124,7 +124,7 @@ window.TV = (function () {
           : nat.filter((n) => n !== "NBA TV" && n !== "Telemundo").join(" / ");
         const status = out
           ? `<span role="img" aria-label="Blacked out">📺</span> <span class="net">${esc(why)}</span>`
-          : `<span role="img" aria-label="Live on League Pass">🏀</span>${cat === "nbatv" ? ' <span class="net">(NBA TV)</span>' : ""}`;
+          : `<span role="img" aria-label="Live">🏀</span> <span class="net">${cat === "nbatv" ? "NBA TV" : "League Pass"}</span>`;
         return `<tr class="${out ? "out" : "live"}${NATIONAL.some((c) => c.key === cat) ? " natl" : ""}">
           <td class="date">${fmtDate(date)}</td>
           <td class="opp">${atHome ? "vs" : "@"} <b>${opp}</b>${label ? ` <span class="tag">${esc(tag(label))}</span>` : ""}</td>
