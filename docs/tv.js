@@ -118,13 +118,13 @@ window.TV = (function () {
         const atHome = home === team, opp = atHome ? away : home, o = data.teams[opp];
         const cat = category(away, home, nat);
         const out = !IS_LIVE[cat];
-        // 🏀 watchable on League Pass (noting NBA TV), 📺 not, with the network or local team to blame
+        // League Pass or NBA TV when watchable; 📺 and the network or local team to blame when not
         const why = cat === "local"
-          ? `Local (${[away, home].filter((a) => local().includes(a)).map((a) => data.teams[a].name).join(" / ")})`
-          : nat.filter((n) => n !== "NBA TV" && n !== "Telemundo").join(" / ");
+          ? `Local (${[away, home].filter((a) => local().includes(a)).map((a) => data.teams[a].name).join("/")})`
+          : nat.filter((n) => n !== "NBA TV" && n !== "Telemundo").join("/");
         const status = out
           ? `<span role="img" aria-label="Blacked out">📺</span> <span class="net">${esc(why)}</span>`
-          : `<span role="img" aria-label="Live">🏀</span> <span class="net">${cat === "nbatv" ? "NBA TV" : "League Pass"}</span>`;
+          : `<span class="net">${cat === "nbatv" ? "NBA TV" : "League Pass"}</span>`;
         return `<tr class="${out ? "out" : "live"}${NATIONAL.some((c) => c.key === cat) ? " natl" : ""}">
           <td class="date">${fmtDate(date)}</td>
           <td class="opp">${atHome ? "vs" : "@"} <b>${opp}</b>${label ? ` <span class="tag">${esc(tag(label))}</span>` : ""}</td>
