@@ -467,7 +467,7 @@
     return `<div class="title">${title}</div>` + note +
       (z.noPop ? "" : row("ZIP Population", z.pop == null ? "—"
         : z.pop === 0 && poOnly.has(zip) ? "0 (PO Boxes Only)" : z.pop.toLocaleString())) +
-      row("Blackout", blackout) +
+      row("Blacked Out", blackout) +
       `<div class="title closest">${heading}</div>${lines.join("")}`;
   }
   function postCensusNote(zip) {
@@ -560,11 +560,91 @@
     showZip(zip);
     writeHash(zip);
   }
+  // ---- town search: "Town, ST", "Town, State" or a town alone, to its ZIPs ----
+  const norm = (s) => s.toLowerCase().replace(/[.,']/g, " ").replace(/\bsaint\b/g, "st").replace(/\s+/g, " ").trim();
+  const STATE_ABBR = Object.fromEntries(Object.entries(STATES).map(([abbr, name]) => [norm(name), abbr]));
+  let towns; // [{label: "Town, ST", town, key: "town st", zips, pop}], built on first use
+  function townIndex() {
+    if (towns) return towns;
+    const m = new Map();
+    for (const [zip, z] of byZip) {
+      if (!z.place) continue;
+      let t = m.get(z.place);
+      if (!t) {
+        const cut = z.place.lastIndexOf(", ");
+        const town = z.place.slice(0, cut), st = z.place.slice(cut + 2);
+        m.set(z.place, (t = { label: z.place, town: norm(town), key: norm(`${town} ${st}`), zips: [], pop: 0 }));
+      }
+      t.zips.push(zip);
+      t.pop += z.pop || 0;
+    }
+    return (towns = [...m.values()].sort((a, b) => b.pop - a.pop)); // most populous first
+  }
+  // q's trailing state, as [the text before it, its abbreviation], or null
+  function splitState(q) {
+    const words = q.split(" ");
+    if (words.length > 1 && STATES[words.at(-1).toUpperCase()]) return [words.slice(0, -1).join(" "), words.at(-1).toUpperCase()];
+    const name = Object.keys(STATE_ABBR).find((n) => q.endsWith(" " + n));
+    return name ? [q.slice(0, -name.length - 1), STATE_ABBR[name]] : null;
+  }
+  function searchTown(text) {
+    const q = norm(text);
+    const split = splitState(q);
+    const all = townIndex();
+    let hit = split ? all.filter((t) => t.key === `${split[0]} ${split[1].toLowerCase()}`) : [];
+    if (!hit.length) hit = all.filter((t) => t.town === q);
+    if (hit.length === 1) return showTown(hit[0]);
+    popup.remove();
+    if (hit.length) {
+      // the same town name in several states
+      result.textContent = "Which one? ";
+      for (const t of hit.slice(0, 12)) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "pick";
+        b.textContent = t.label;
+        b.addEventListener("click", () => { input.value = t.label; showTown(t); });
+        result.append(b);
+      }
+      return;
+    }
+    const hiddenSt = split && Object.values(data.hidden || {}).includes(split[1]) && split[1];
+    result.textContent = hiddenSt
+      ? `${STATES[hiddenSt]} isn't shown on the map: none of its ZIPs has a local blackout (see Notes).`
+      : `No town called “${text}” found. Try its ZIP code, or the town's postal name.`;
+  }
+  // a town opens its most populous ZIP
+  function showTown(t) {
+    const pop = (zip) => byZip.get(zip).pop || 0;
+    const zip = t.zips.reduce((a, b) => (pop(b) > pop(a) ? b : a));
+    search(zip);
+    if (t.zips.length > 1) {
+      const teamsOf = (z) => (byZip.get(z).idxs || []).join();
+      const same = t.zips.every((z) => teamsOf(z) === teamsOf(zip));
+      result.textContent = `${t.label} has ${t.zips.length} ZIP codes; showing ${zip}, the most populous. ` +
+        (same ? "All have the same blackouts." : "Their blackouts differ, so search your ZIP to be sure.");
+    }
+  }
+  // suggestions as you type a town; picking one searches it
+  const input = document.getElementById("zip");
+  const suggest = document.getElementById("towns");
+  input.addEventListener("input", (e) => {
+    if (e.inputType === "insertReplacementText" || (!e.inputType && townIndex().some((t) => t.label === input.value))) {
+      suggest.replaceChildren();
+      document.getElementById("search").requestSubmit();
+      return;
+    }
+    const q = norm(input.value);
+    const opts = q.length < 2 || /^\d/.test(q) ? []
+      : townIndex().filter((t) => t.key.startsWith(q)).slice(0, 8);
+    suggest.replaceChildren(...opts.map((t) => Object.assign(document.createElement("option"), { value: t.label })));
+  });
   document.getElementById("search").addEventListener("submit", (e) => {
     e.preventDefault();
-    const zip = document.getElementById("zip").value.trim();
-    if (/^\d{5}$/.test(zip)) search(zip);
-    else result.textContent = "Enter a 5-digit ZIP code.";
+    const q = input.value.trim();
+    if (/^\d{5}$/.test(q)) search(q);
+    else if (!q || /^\d+$/.test(q)) result.textContent = "Enter a 5-digit ZIP code, or a town and state.";
+    else searchTown(q);
   });
 
   // a team's territory ring, as a geodesic circle: 75 miles beyond its home city's farthest

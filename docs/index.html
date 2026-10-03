@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NBA League Pass Blackout Map</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
-  <meta name="description" content="Which NBA teams are locally blacked out on NBA League Pass in every US ZIP code. Filter by team or search a ZIP.">
+  <meta name="description" content="Which NBA teams are locally blacked out on NBA League Pass in every US ZIP code. Filter by team or search a ZIP code or town.">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="tv.css">
@@ -20,9 +20,10 @@
     <h1>NBA League Pass Blackout Map</h1>
 
     <form id="search" autocomplete="off">
-      <label for="zip">ZIP code search</label>
+      <label for="zip">Location search</label>
       <div class="row">
-        <input id="zip" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="e.g. 02139">
+        <input id="zip" list="towns" placeholder="ZIP code, or town and state" autocapitalize="words" spellcheck="false">
+        <datalist id="towns"></datalist>
         <button type="submit">Go</button>
       </div>
       <p id="search-result" aria-live="polite"></p>
@@ -109,7 +110,7 @@
         <li><strong>Blackouts</strong> come from NBA.com's League Pass ZIP lookup (<a href="https://www.nba.com/league-pass-purchase">nba.com/league-pass-purchase</a>), queried for every ZIP. Check NBA.com for the final word on your address. National TV blackouts are in the <strong>TV Schedule</strong> panel.</li>
         <li><strong>Points</strong> are the Census Bureau's 2025 ZIP Code Tabulation Areas, at each area's internal point, plus 203 USPS ZIPs created since the 2020 Census, placed with <a href="https://www.huduser.gov/portal/datasets/usps_crosswalk.html">HUD's USPS ZIP crosswalk</a>. About 7,000 other USPS ZIPs (PO-box sections, single organizations) have no area of their own; they aren't drawn, but the search finds them (<a href="https://data.hrsa.gov/DataDownload/GeoCareNavigator/ZIP%20Code%20to%20ZCTA%20Crosswalk.xlsx">HRSA crosswalk</a>).</li>
         <li><strong>Population</strong> is from the Census Bureau's American Community Survey<span id="pop-source"></span>; for the newer ZIPs it's estimated from Census tracts. The map starts at 500+ people; drag the slider to 0 to see every ZIP. "PO Boxes Only" marks ZIPs with no residents because they serve only post office boxes.</li>
-        <li><strong>Town and state</strong> are the USPS city name (<a href="https://pypi.org/project/zipcodes/">zipcodes</a> package). <strong>State lines</strong> are the Census Bureau's 2025 cartographic boundaries, simplified.</li>
+        <li><strong>Town and state</strong> are the USPS city name (<a href="https://pypi.org/project/zipcodes/">zipcodes</a> package); searching a town opens its most populous ZIP. <strong>State lines</strong> are the Census Bureau's 2025 cartographic boundaries, simplified.</li>
         <li><strong>Colors:</strong> a team color marks a ZIP blacked out for that team alone. A ZIP blacked out for several teams is a pie, one equal slice per team, each turned toward its arena (Knicks/Nets and Lakers/Clippers split north/south). <em>One</em> and <em>Multiple</em> count all of a ZIP's teams, not just the selected ones. Teal marks ZIPs with no data: NBA.com lists no local teams for them (or doesn't recognize them), though some are likely blacked out all the same.</li>
         <li><strong>Rings</strong> show each team's 75-mile marketing territory, which the NBA measures from the home city's limits: the smallest circle holding every point within 75 miles of them (Census 2025 city boundaries; Toronto from OpenStreetMap; San Francisco without the Farallon Islands). They show for the selected teams, or for every team when none is selected.</li>
         <li><strong>Closest teams</strong> are ranked by typical drive time without traffic and shown with road miles, from each ZIP's nearest road point to the six closest arenas (<a href="https://openrouteservice.org">openrouteservice</a>, © OpenStreetMap contributors), or by straight-line distance to the arena (<em>Closest teams by</em>). The popup lists the five closest, plus any team blacked out there that’s farther away, such as the Grizzlies across much of Kentucky or the Nets in western New York. Every mainland ZIP has drive times; Hawaii, with no road route to an arena, falls back to straight line.</li>
