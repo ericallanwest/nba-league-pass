@@ -438,33 +438,37 @@
       const st = z.place.slice(cut + 2);
       title = `${z.place.slice(0, cut)}, ${STATES[st] || st} (${zip})`;
     }
-    const blackout = z.idxs === undefined ? "Not looked up yet"
-      : !z.idxs ? "No data from NBA.com"
-      : z.idxs.length ? z.idxs.map((i) => teams[i].name).join("/")
-      : "No data from NBA.com";
     const crow = (t) => Math.round(miles(z.lat, z.lon, t.lat, t.lon)).toLocaleString();
-    // teams blacked out here keep the dark text; the rest are in the lighter label color
-    // (all dark when there's no blackout data to go by)
-    const out = (i) => Array.isArray(z.idxs) && !z.idxs.includes(i);
-    const line = (i, text) => `<div${out(i) ? ' class="label"' : ""}>${text}</div>`;
+    // the Closest Teams list, as [team index, text]
     let closest, heading = "Closest Teams";
     if (dist === "drive" && z.drives && z.drives.length) {
       // miles by road when the data has them; older rows only have drive time
-      closest = z.drives.map(([i, m, mi]) => line(i, `${teams[i].name}: ${duration(m)} (${
-        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})`));
+      closest = z.drives.map(([i, m, mi]) => [i, `${teams[i].name}: ${duration(m)} (${
+        mi != null ? `${mi.toLocaleString()} mi` : `${crow(teams[i])} mi straight line`})`]);
     } else {
       heading += " (straight line)";
       closest = teams
         .map((t, i) => ({ t, i, d: miles(z.lat, z.lon, t.lat, t.lon) }))
         .sort((a, b) => a.d - b.d)
-        .slice(0, 5)
-        .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} mi`));
+        // the 5 closest, plus any team blacked out here that's farther away
+        .filter(({ i }, rank) => rank < 5 || (Array.isArray(z.idxs) && z.idxs.includes(i)))
+        .map(({ t, i }) => [i, `${t.name}: ${crow(t)} mi`]);
     }
+    // blackout teams in the order they're listed under Closest Teams (any not listed last)
+    const rank = (i) => { const r = closest.findIndex(([j]) => j === i); return r < 0 ? Infinity : r; };
+    const blackout = z.idxs === undefined ? "Not looked up yet"
+      : !z.idxs ? "No data from NBA.com"
+      : z.idxs.length ? [...z.idxs].sort((a, b) => rank(a) - rank(b)).map((i) => teams[i].name).join("/")
+      : "No data from NBA.com";
+    // teams blacked out here keep the dark text; the rest are in the lighter label color
+    // (all dark when there's no blackout data to go by)
+    const out = (i) => Array.isArray(z.idxs) && !z.idxs.includes(i);
+    const lines = closest.map(([i, text]) => `<div${out(i) ? ' class="label"' : ""}>${text}</div>`);
     return `<div class="title">${title}</div>` + note +
       (z.noPop ? "" : row("ZIP Population", z.pop == null ? "—"
         : z.pop === 0 && poOnly.has(zip) ? "0 (PO Boxes Only)" : z.pop.toLocaleString())) +
-      row("Blackout Team(s)", blackout) +
-      `<div class="title closest">${heading}</div>${closest.join("")}`;
+      row("Blackout", blackout) +
+      `<div class="title closest">${heading}</div>${lines.join("")}`;
   }
   function postCensusNote(zip) {
     if (!data.post_census || !(zip in data.post_census)) return "";

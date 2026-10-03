@@ -2,7 +2,10 @@
 OpenRouteService Matrix API, writing data/drive_times.csv.
 
 For each ZIP, the 6 arenas closest in a straight line are routed, and the 5
-shortest drives are kept. The free plan's matrix quota is about 50 requests a
+shortest drives are kept, plus the drive to any team blacked out there that
+isn't among them (NBA territories reach past the closest arenas, e.g. the
+Grizzlies across Kentucky). A ZIP already routed but missing a blacked-out
+team's drive gets just that team routed and added. The free plan's matrix quota is about 50 requests a
 day (ORS reports "limit 50"), each up to 3,500 routes, so every request is packed
 full: neighbouring ZIPs against the union of their candidate arenas. That fits
 roughly 350 ZIPs per request, so all ~33,000 ZIPs take about two days from
@@ -182,6 +185,20 @@ class Unroutable(Exception):
         self.index = int(m.group(1)) if m else None
 
 
+def keep(drives, blacked):
+    """The KEEP shortest drives, plus any longer one to a team blacked out at the ZIP,
+    as the CSV's "ABBR:minutes:miles|..." text."""
+    drives = sorted(drives)
+    kept = drives[:KEEP] + [d for d in drives[KEEP:] if d[2] in blacked]
+    return "|".join(f"{abbr}:{m}:{mi}" for m, mi, abbr in kept)
+
+
+def unroutable(z):
+    """The row for a ZIP ORS couldn't route: empty, or what it had before for a ZIP
+    that was only getting a blacked-out team's drive added."""
+    return z["zip"], keep(z["have"], z["blacked"]) if z["have"] else ""
+
+
 def route(matrix, batch, teams):
     """Yield (zip, drives) for a batch of ZIPs. On a rejection, drop the ZIP ORS
     names and retry the rest; if it names none, halve the batch, so one
@@ -193,11 +210,11 @@ def route(matrix, batch, teams):
     except Unroutable as e:
         if len(batch) == 1:
             print(f"  {batch[0]['zip']}: unroutable ({e})", file=sys.stderr)
-            yield batch[0]["zip"], ""
+            yield unroutable(batch[0])
             return
         if e.index is not None and e.index < len(batch):
             print(f"  {batch[e.index]['zip']}: unroutable ({e})", file=sys.stderr)
-            yield batch[e.index]["zip"], ""
+            yield unroutable(batch[e.index])
             yield from route(matrix, batch[:e.index] + batch[e.index + 1:], teams)
             return
         mid = len(batch) // 2
@@ -211,8 +228,8 @@ def route(matrix, batch, teams):
                       f"set route_lat/route_lon in data/teams.csv to a point on a road by the arena", file=sys.stderr)
     for z, row in zip(batch, minutes):
         col = {i: m for i, m in zip(arena_idx, row)}
-        drives = sorted((*col[i], teams[i]["abbr"]) for i in z["cands"] if col[i] is not None)[:KEEP]
-        yield z["zip"], "|".join(f"{abbr}:{m}:{mi}" for m, mi, abbr in drives)
+        drives = z["have"] + [(*col[i], teams[i]["abbr"]) for i in z["cands"] if col[i] is not None]
+        yield z["zip"], keep(drives, z["blacked"])
 
 
 def check_arenas(matrix, teams):
@@ -266,27 +283,44 @@ def main():
         # route to a point on a public road by the arena when the arena's own point doesn't snap to one
         t["route"] = [float(t["route_lon"]), float(t["route_lat"])] if t.get("route_lat") else [t["lon"], t["lat"]]
     states = {r["zip"]: r["state"] for r in read_csv("zcta_places.csv")}
-    done = set()
+    idx = {t["abbr"]: i for i, t in enumerate(teams)}
+    blackouts = {r["zip"]: {a for a in r["team_abbrs"].split("|") if a}
+                 for r in read_csv("nba_blackouts.csv") if r["status"] == "ok"}
+    done = {}  # zip -> its drives, as (minutes, miles, abbr)
     if os.path.exists(OUT):
         # rows without driving distance (the older ABBR:minutes form) get routed again
-        done = {r["zip"] for r in csv.DictReader(open(OUT, newline="", encoding="utf-8"))
-                if all(d.count(":") == 2 for d in r["drives"].split("|") if d)}
+        for r in csv.DictReader(open(OUT, newline="", encoding="utf-8")):
+            parts = [d.split(":") for d in r["drives"].split("|") if d]
+            if all(len(p) == 3 for p in parts):
+                done[r["zip"]] = [(int(m), int(mi), abbr) for abbr, m, mi in parts]
 
-    todo, skipped = [], []
+    todo, skipped, adding = [], [], 0
     for r in read_csv("zcta_centroids.csv"):
-        if r["zip"] in done:
+        z = r["zip"]
+        blacked = blackouts.get(z, set())
+        if z in done:
+            have = done[z]
+            # an unroutable ZIP (no drives) stays that way
+            missing = blacked - {abbr for _, _, abbr in have} if have else set()
+            if not missing:
+                continue
+            cands, adding = sorted(idx[a] for a in missing), adding + 1
+        elif states.get(z) in NO_DRIVE_STATES:
+            skipped.append(z)
             continue
-        if states.get(r["zip"]) in NO_DRIVE_STATES:
-            skipped.append(r["zip"])
-            continue
-        lat, lon = float(r["lat"]), float(r["lon"])
-        by_dist = sorted(range(len(teams)), key=lambda i: miles(lat, lon, teams[i]["lat"], teams[i]["lon"]))
-        todo.append({"zip": r["zip"], "lat": lat, "lon": lon, "cands": by_dist[:CANDIDATES]})
+        else:
+            have = []
+            lat, lon = float(r["lat"]), float(r["lon"])
+            by_dist = sorted(range(len(teams)), key=lambda i: miles(lat, lon, teams[i]["lat"], teams[i]["lon"]))
+            cands = by_dist[:CANDIDATES] + sorted(idx[a] for a in blacked if idx[a] not in by_dist[:CANDIDATES])
+        todo.append({"zip": z, "lat": float(r["lat"]), "lon": float(r["lon"]), "cands": cands,
+                     "have": have, "blacked": blacked})
     # by nearest arenas, so a request's ZIPs share most of their candidates and it
     # holds as many ZIPs as it can (this beats routing the populous ZIPs first now
     # that a day's 50 requests cover nearly every ZIP)
     todo.sort(key=lambda z: (z["cands"][:2], z["lat"]))
-    print(f"{len(done)} done, {len(skipped)} with no road route, {len(todo)} to route", file=sys.stderr)
+    print(f"{len(done) - adding} done, {len(skipped)} with no road route, {len(todo)} to route "
+          f"({adding} of them only for a blacked-out team's drive)", file=sys.stderr)
 
     new_file = not os.path.exists(OUT)
     matrix = Matrix(key, args.max_requests, args.pause)
