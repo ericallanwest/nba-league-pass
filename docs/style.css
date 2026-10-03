@@ -37,12 +37,12 @@ body {
   display: flex; flex-direction: column;
 }
 
-/* map settings (left) and TV Schedule (right) beside the map; each slides shut behind a tab on its
-   inner edge (--lw/--rw are the open widths) */
-#layout { flex: 1; min-height: 0; display: flex; position: relative; --lw: 320px; --rw: 440px; }
+/* team and TV Schedule (left) and map settings (right) beside the map; each slides shut behind a tab
+   on its inner edge (--lw/--rw are the open widths) */
+#layout { flex: 1; min-height: 0; display: flex; position: relative; --lw: 440px; --rw: 320px; }
 #panel, #tv { transition: width .25s ease, padding .25s ease; }
-body.left-hidden #panel { width: 0; padding-left: 0; padding-right: 0; border-right-width: 0; overflow: hidden; }
-body.tv-hidden #tv { width: 0; padding-left: 0; padding-right: 0; border-left-width: 0; overflow: hidden; }
+body.panel-hidden #panel { width: 0; padding-left: 0; padding-right: 0; border-left-width: 0; overflow: hidden; }
+body.tv-hidden #tv { width: 0; padding-left: 0; padding-right: 0; border-right-width: 0; overflow: hidden; }
 .edge-toggle {
   position: absolute; top: 50%; transform: translateY(-50%); z-index: 6;
   width: 16px; height: 52px; padding: 0; border: none;
@@ -51,30 +51,36 @@ body.tv-hidden #tv { width: 0; padding-left: 0; padding-right: 0; border-left-wi
   transition: left .25s ease, right .25s ease;
 }
 .edge-toggle:hover { background: var(--accent); filter: brightness(1.15); }
-#toggle-panel { left: var(--lw); border-radius: 0 4px 4px 0; }
-body.left-hidden #toggle-panel { left: 0; }
-#toggle-tv { right: var(--rw); border-radius: 4px 0 0 4px; }
-body.tv-hidden #toggle-tv { right: 0; }
+#toggle-tv { left: var(--lw); border-radius: 0 4px 4px 0; }
+body.tv-hidden #toggle-tv { left: 0; }
+#toggle-panel { right: var(--rw); border-radius: 4px 0 0 4px; }
+body.panel-hidden #toggle-panel { right: 0; }
 
 #panel {
-  width: var(--lw);
+  width: var(--rw);
   flex: none;
   height: 100%;
   overflow-y: auto;
   background: var(--panel);
-  border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border);
   padding: 16px;
 }
+.panel-title { margin: 4px 0 14px; font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); white-space: nowrap; }
 #map { flex: 1; height: 100%; }
 
 h1 { font-size: 18px; margin: 0 0 16px; }
-#panel h1 { min-width: 280px; } /* keeps its lines while the panel slides shut */
+#tv h1 { min-width: 380px; } /* keeps its lines while the panel slides shut */
 h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; margin: 0; color: var(--muted); }
 a { color: var(--accent); }
 
 #search { margin-bottom: 16px; }
 /* styled like the section headings (h2) */
-#search label { display: block; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
+#team-picker { margin-bottom: 12px; }
+#team-picker select {
+  width: 100%; font: inherit; font-size: 16px; font-weight: 600; padding: 7px 8px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); cursor: pointer;
+}
+#team-picker label, #search label { display: block; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; }
 .row { display: flex; gap: 6px; }
 input#zip {
   flex: 1; min-width: 0;
@@ -184,11 +190,12 @@ section > h2:first-child { margin-top: 0; }
 @media (max-width: 900px) {
   #layout { --lw: min(calc(100% - 24px), 420px); --rw: min(calc(100% - 24px), 420px); }
   #panel, #tv { position: absolute; top: 0; bottom: 0; z-index: 5; box-shadow: 0 0 16px rgba(0,0,0,.25); }
-  body.left-hidden #panel, body.tv-hidden #tv { box-shadow: none; }
-  #panel { left: 0; }
-  #tv { right: 0; }
+  body.panel-hidden #panel, body.tv-hidden #tv { box-shadow: none; }
+  #tv { left: 0; }
+  #panel { right: 0; }
+  #tv h1 { min-width: 0; }
   /* one panel at a time: the other's tab steps aside while one is open */
-  body:not(.tv-hidden) #toggle-panel, body:not(.left-hidden) #toggle-tv { display: none; }
+  body:not(.tv-hidden) #toggle-panel, body:not(.panel-hidden) #toggle-tv { display: none; }
 }
 
 /* MapLibre styles control buttons as display:block; center the icon in both directions */
