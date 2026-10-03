@@ -115,9 +115,10 @@
   const compact = (n) => (n >= 999500 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : `${n}`);
   const counts = teams.map(() => 0);
   const teamPeople = teams.map(() => 0); // blacked-out population per team, whatever the filters
+  const teamShared = teams.map(() => 0); // of a team's ZIPs, those blacked out for other teams too
   const features = data.zips.map(([zip, lat, lon, idxs, place, pop, drives]) => {
     byZip.set(zip, { lat, lon, idxs, place, pop, drives });
-    if (idxs) idxs.forEach((i) => { counts[i]++; teamPeople[i] += pop || 0; });
+    if (idxs) idxs.forEach((i) => { counts[i]++; teamPeople[i] += pop || 0; if (idxs.length > 1) teamShared[i]++; });
     const abbrs = idxs ? idxs.map((i) => teams[i].abbr) : [];
     const props = { z: zip, t: `|${abbrs.join("|")}|`, nd: idxs === null, n: idxs ? idxs.length : -1, p: pop ?? -1 };
     if (idxs && idxs.length >= 2) Object.assign(props, pie(lat, lon, idxs));
@@ -148,6 +149,9 @@
   // likely blacked out all the same. "blackouts=none" is the older link form
   let noData = params.get("nodata") === "1" || params.get("blackouts") === "none";
   if (params.get("blackouts") === "none") selected = new Set();
+  // team mode: the map is about one picked team (dropdown, calendar icon or arena), with its card in
+  // place of the all-teams filters; it starts when a link or last visit has just that team
+  let focused = selected.size === 1 && (startTeam || tvParam === [...selected][0]) ? [...selected][0] : null;
   document.querySelector(`#count input[value="${mode}"]`).checked = true;
   if (params.get("other") === "0") showOther.checked = false;
   // popup's closest teams: by drive time, or by straight-line distance to the arena
@@ -210,6 +214,7 @@
       <button type="button" class="sched" title="Show only the ${t.name}: their blackout area and TV Schedule" aria-label="Show only the ${t.city} ${t.name}">${CAL_ICON}</button>`;
     li.querySelector("input").addEventListener("change", (e) => {
       e.target.checked ? selected.add(t.abbr) : selected.delete(t.abbr);
+      focused = null;
       update();
     });
     // just this team: its dots, the map framed on them, and its games in the TV Schedule
@@ -229,8 +234,13 @@
     cb.checked = noData;
     cb.addEventListener("change", () => { noData = cb.checked; update(); });
   }
-  document.getElementById("all").onclick = () => { selected = new Set(teams.map((t) => t.abbr)); update(); };
-  document.getElementById("none").onclick = () => { selected = new Set(); update(); };
+  const showAll = () => { selected = new Set(teams.map((t) => t.abbr)); focused = null; update(); };
+  document.getElementById("all").onclick = showAll;
+  document.getElementById("none").onclick = () => { selected = new Set(); focused = null; update(); };
+  document.getElementById("focus-all").onclick = () => {
+    showAll();
+    map.fitBounds(HOME, { padding: 20 });
+  };
   for (const el of [showOther, rings, sizePop]) el.onchange = update;
   for (const r of document.querySelectorAll("#count input")) r.onchange = () => { mode = r.value; update(); };
   for (const r of document.querySelectorAll("#dist input")) r.onchange = () => {
@@ -261,31 +271,14 @@
     if (w <= e) map.fitBounds([[w, s], [e, n]], { padding: 40, maxZoom: 8 });
   }
 
-  function solo(abbr) {
-    selected = new Set([abbr]);
-    update();
-  }
-  // a team picked from the dropdown or a team list's calendar icon: just its dots, the map framed
-  // on them, and its games in the TV Schedule
+  // a team picked from the dropdown, a team list's calendar icon or its arena: team mode, with the
+  // map framed on its blacked-out ZIPs and its games in the TV Schedule
   function pickTeam(abbr) {
-    solo(abbr);
+    selected = new Set([abbr]);
+    focused = abbr;
+    update();
     zoomToTeam(teams.findIndex((t) => t.abbr === abbr));
     TV.show(abbr);
-  }
-
-  // arena marker clicks: from the all-teams view, show just that team; after that each click
-  // adds or removes one team, so several can be picked (or dropped) on the map. Removing the
-  // last one goes back to all teams rather than an empty map.
-  // The TV Schedule follows the most recently picked team.
-  function toggleTeam(abbr) {
-    if (selected.size === teams.length) {
-      TV.show(abbr);
-      return solo(abbr);
-    }
-    selected.has(abbr) ? selected.delete(abbr) : selected.add(abbr);
-    if (!selected.size) selected = new Set(teams.map((t) => t.abbr));
-    if (selected.has(abbr) && selected.size < teams.length) TV.show(abbr);
-    update();
   }
 
   // ---- map styling from the filters ----
@@ -300,7 +293,10 @@
   };
   const has = (abbr) => ["in", `|${abbr}|`, ["get", "t"]];
 
+  // the One/Multiple filter is for comparing teams; team mode shows all of its team's ZIPs
+  const countMode = () => (focused ? "any" : mode);
   function expressions() {
+    const mode = countMode();
     const sel = teams.filter((t) => selected.has(t.abbr));
     const matches = ["+", 0, 0, ...sel.map((t) => ["case", has(t.abbr), 1, 0])];
     const [lo, hi] = popRange();
@@ -312,7 +308,9 @@
     // like the Tableau viz, only single-team ZIPs take a team color; a ZIP blacked out for two or
     // more teams is gray (outlined) even when one of them is selected
     // pies cover 2+ team ZIPs; their circle underneath only draws the outline
-    const color = ["case", none, NONE_COLOR, [">=", ["get", "n"], 2], "rgba(0,0,0,0)", teamColor];
+    // in team mode every ZIP of the team takes its color, shared or not (the popup names the others)
+    const color = focused ? ["case", none, NONE_COLOR, teamColor]
+      : ["case", none, NONE_COLOR, [">=", ["get", "n"], 2], "rgba(0,0,0,0)", teamColor];
     return { hit, other: ["all", ["!", hit], popCond], color };
   }
 
@@ -328,6 +326,7 @@
 
   // ZIPs (and people) matching the team filter, and the no-data ZIPs shown
   function matching() {
+    const mode = countMode();
     const [lo, hi] = popRange();
     const r = { n: 0, people: 0, nd: 0, ndPeople: 0 };
     for (const z of byZip.values()) {
@@ -364,7 +363,7 @@
       map.setPaintProperty("rings", "line-color", RING());
       map.setPaintProperty("states", "line-color", STATE_LINE());
       map.setPaintProperty("zips-hit", "circle-radius", radius(1));
-      map.setFilter("zips-pie", ["all", hit, [">=", ["get", "n"], 2]]);
+      map.setFilter("zips-pie", focused ? false : ["all", hit, [">=", ["get", "n"], 2]]);
       map.setLayoutProperty("zips-pie", "icon-size", radius(1 / PIE_R));
       map.setFilter("zips-searched", ["==", ["get", "z"], highlighted]);
       // a filtered-out ZIP gets a gray dot; one already shown just gets the ring
@@ -373,15 +372,30 @@
       map.setPaintProperty("zips-searched", "circle-stroke-color", dark ? "#f0f0ec" : "#1c1c1c");
       map.setFilter("zips-other", other);
       map.setPaintProperty("zips-other", "circle-radius", radius(0.8));
+      map.setPaintProperty("zips-other", "circle-opacity", focused ? 0.4 : 0.85); // team mode: the rest recede
       map.setLayoutProperty("zips-other", "visibility", showOther.checked ? "visible" : "none");
       // rings for the selected teams; every arena's when there's no selection to follow (no teams, or "None")
       const ringTeams = !selected.size ? teams.map((t) => t.abbr) : [...selected];
       map.setFilter("rings", ["in", ["get", "abbr"], ["literal", ringTeams]]);
       map.setLayoutProperty("rings", "visibility", rings.checked ? "visible" : "none");
     }
-    for (const [abbr, el] of markers) el.style.opacity = !selected.size || selected.has(abbr) ? 1 : 0.35;
+    for (const [abbr, el] of markers) {
+      el.style.opacity = !selected.size || selected.has(abbr) ? 1 : 0.35;
+      el.classList.toggle("focus", abbr === focused);
+    }
 
     const { n, people, nd, ndPeople } = matching();
+    document.body.classList.toggle("team-mode", !!focused);
+    document.getElementById("focus").hidden = !focused;
+    if (focused) {
+      // the team's whole area, whatever the population filter
+      const i = teams.findIndex((x) => x.abbr === focused), t = teams[i];
+      document.getElementById("focus").style.setProperty("--team", t.color);
+      document.getElementById("focus-name").textContent = `${t.city} ${t.name}`;
+      document.getElementById("focus-stats").textContent = !counts[i] ? "NBA.com lists no US ZIPs where it's blacked out."
+        : `Blacked out in ${counts[i].toLocaleString()} ZIPs, home to ${teamPeople[i] >= 1e6 ? `${(teamPeople[i] / 1e6).toFixed(1)} million` : teamPeople[i].toLocaleString()} people` +
+          (teamShared[i] ? `; ${teamShared[i].toLocaleString()} of them also black out another team.` : ".");
+    }
     // older data files lack lookup_remaining; fall back to counting ZIPs without data
     const remaining = data.lookup_remaining ?? data.zips.length - looked;
     const coverage = remaining > 0
@@ -411,8 +425,8 @@
     el.className = "arena";
     el.style.background = t.color;
     el.textContent = t.abbr;
-    el.title = `${t.city} ${t.name} — ${t.arena}. Click to add or remove this team.`;
-    el.addEventListener("click", (e) => { e.stopPropagation(); toggleTeam(t.abbr); });
+    el.title = `${t.city} ${t.name} — ${t.arena}. Click for its TV Schedule and blackout area.`;
+    el.addEventListener("click", (e) => { e.stopPropagation(); pickTeam(t.abbr); });
     markers.set(t.abbr, el);
     new maplibregl.Marker({ element: el }).setLngLat([t.lon, t.lat]).addTo(map);
   });
