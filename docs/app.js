@@ -457,7 +457,8 @@
       closest = teams
         .map((t, i) => ({ t, i, d: miles(z.lat, z.lon, t.lat, t.lon) }))
         .sort((a, b) => a.d - b.d)
-        .slice(0, 5)
+        // the 5 closest, plus any team blacked out here that's farther away
+        .filter(({ i }, rank) => rank < 5 || (Array.isArray(z.idxs) && z.idxs.includes(i)))
         .map(({ t, i }) => line(i, `${t.name}: ${crow(t)} mi`));
     }
     return `<div class="title">${title}</div>` + note +
