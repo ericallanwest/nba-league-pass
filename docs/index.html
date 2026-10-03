@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NBA League Pass Blackout Map</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
-  <meta name="description" content="Which NBA teams are locally blacked out on NBA League Pass in every US ZIP code. Filter by team or search a ZIP code or town.">
+  <meta name="description" content="Which NBA teams are locally blacked out on NBA League Pass in every US ZIP code. Pick a team to see its TV schedule and blackout area, or search a ZIP code or town.">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="tv.css">
@@ -16,11 +16,16 @@
 </head>
 <body>
   <div id="layout">
-  <aside id="panel" aria-label="ZIP Code Map settings">
+  <aside id="tv" aria-label="TV Schedule">
     <h1>NBA League Pass Blackout Map</h1>
 
+    <div id="team-picker">
+      <label for="team-pick">Team</label>
+      <select id="team-pick"><option value="" disabled selected>Choose a team…</option></select>
+    </div>
+
     <form id="search" autocomplete="off">
-      <label for="zip">Location search</label>
+      <label for="zip">Your location</label>
       <div class="row">
         <input id="zip" list="towns" placeholder="ZIP code, or town and state" autocapitalize="words" spellcheck="false">
         <datalist id="towns"></datalist>
@@ -28,6 +33,48 @@
       </div>
       <p id="search-result" aria-live="polite"></p>
     </form>
+
+    <h2 class="tv-title">TV Schedule</h2>
+    <p class="lede">
+      League Pass doesn't show live games on ESPN, ABC, NBC, Peacock or Prime Video anywhere in the US,
+      so how many of a team's 82 games you can watch depends on how often it plays on national TV.
+    </p>
+    <p id="tv-context"></p>
+
+    <section id="games" hidden>
+      <ul class="legend" id="legend"></ul>
+      <div class="team-bar" id="team-bar" role="img"></div>
+      <p id="games-sum" class="muted"></p>
+      <div class="games-tools">
+        <label class="only-out"><input type="checkbox" id="only-out"> National TV games only</label>
+      </div>
+      <table id="games-table">
+        <colgroup><col class="c-date"><col class="c-opp"><col class="c-time"><col class="c-lp"></colgroup>
+        <thead><tr><th>Date</th><th>Opp.</th><th>ET</th><th>Network</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+    <p id="games-none" class="muted">Choose a team above, or click a team’s arena on the map.</p>
+
+    <details id="tv-notes">
+      <summary>Notes &amp; sources</summary>
+      <ul>
+        <li>Schedule and national broadcasters from NBA.com's league schedule feed, refreshed weekly. The full schedule, with TV listings, is at <a href="https://www.nba.com/schedule">nba.com/schedule</a>.</li>
+        <li>Blackout networks per the <a href="https://www.nba.com/league-pass-purchase">League Pass purchase page</a>: ESPN, ABC, NBC, Peacock and Amazon Prime Video. NBC games also stream on Peacock; the Peacock segment is games on Peacock and NBC Sports Network without NBC.</li>
+        <li>With no ZIP picked, counts are for a viewer outside every team's local area. With one, games involving its locally blacked-out teams (from the map's NBA.com lookup) count as local blackouts, unless they're already on national TV.</li>
+        <li>Each team's last two games depend on the NBA Cup group stage and are added once the league schedules them in December.</li>
+      </ul>
+    </details>
+  </aside>
+
+  <main id="map" aria-label="Map of blacked-out ZIP codes"></main>
+  <!-- tabs on the panels' inner edges; they slide to the screen edge when a panel is hidden -->
+  <button type="button" class="edge-toggle" id="toggle-tv" aria-controls="tv" aria-expanded="true" aria-label="Hide the TV Schedule" title="Hide/show the team and TV Schedule">◀</button>
+  <button type="button" class="edge-toggle" id="toggle-panel" aria-controls="panel" aria-expanded="false" aria-label="Show the map settings" title="Hide/show the map settings">◀</button>
+
+  <aside id="panel" aria-label="Map settings">
+    <h2 class="panel-title">Map</h2>
+
 
     <section>
       <h2>ZIP population</h2>
@@ -116,48 +163,6 @@
         <li><strong>Closest teams</strong> are ranked by typical drive time without traffic and shown with road miles, from each ZIP's nearest road point to the six closest arenas (<a href="https://openrouteservice.org">openrouteservice</a>, © OpenStreetMap contributors), or by straight-line distance to the arena (<em>Closest teams by</em>). The popup lists the five closest, plus any team blacked out there that’s farther away, such as the Grizzlies across much of Kentucky or the Nets in western New York. Every mainland ZIP has drive times; Hawaii, with no road route to an arena, falls back to straight line.</li>
         <li><strong>Not shown:</strong> Alaska, where NBA.com lists no local teams for any ZIP, and Puerto Rico and the other territories, whose ZIPs it doesn't recognize.</li>
         <li>Data last built <span id="updated">—</span>. Code and data: <a href="https://github.com/ericallanwest/nba-league-pass">github.com/ericallanwest/nba-league-pass</a>.</li>
-      </ul>
-    </details>
-  </aside>
-
-  <main id="map" aria-label="Map of blacked-out ZIP codes"></main>
-  <!-- tabs on the panels' inner edges; they slide to the screen edge when a panel is hidden -->
-  <button type="button" class="edge-toggle" id="toggle-panel" aria-controls="panel" aria-expanded="true" aria-label="Hide the map settings" title="Hide/show the map settings">◀</button>
-  <button type="button" class="edge-toggle" id="toggle-tv" aria-controls="tv" aria-expanded="false" aria-label="Show the TV Schedule" title="Hide/show the TV Schedule">◀</button>
-
-  <aside id="tv" aria-label="TV Schedule">
-    <h2 class="tv-title">TV Schedule</h2>
-    <p class="lede">
-      League Pass doesn't show live games on ESPN, ABC, NBC, Peacock or Prime Video anywhere in the US,
-      so how many of a team's 82 games you can watch depends on how often it plays on national TV.
-    </p>
-    <p id="tv-context"></p>
-
-    <section id="games" hidden>
-      <div class="games-head">
-        <h3 id="games-title"></h3>
-      </div>
-      <ul class="legend" id="legend"></ul>
-      <div class="team-bar" id="team-bar" role="img"></div>
-      <p id="games-sum" class="muted"></p>
-      <div class="games-tools">
-        <label class="only-out"><input type="checkbox" id="only-out"> National TV games only</label>
-      </div>
-      <table id="games-table">
-        <colgroup><col class="c-date"><col class="c-opp"><col class="c-time"><col class="c-lp"></colgroup>
-        <thead><tr><th>Date</th><th>Opp.</th><th>ET</th><th>Network</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-    <p id="games-none" class="muted">Pick a team on the map, or with a calendar icon in the team list.</p>
-
-    <details id="tv-notes">
-      <summary>Notes &amp; sources</summary>
-      <ul>
-        <li>Schedule and national broadcasters from NBA.com's league schedule feed, refreshed weekly. The full schedule, with TV listings, is at <a href="https://www.nba.com/schedule">nba.com/schedule</a>.</li>
-        <li>Blackout networks per the <a href="https://www.nba.com/league-pass-purchase">League Pass purchase page</a>: ESPN, ABC, NBC, Peacock and Amazon Prime Video. NBC games also stream on Peacock; the Peacock segment is games on Peacock and NBC Sports Network without NBC.</li>
-        <li>With no ZIP picked, counts are for a viewer outside every team's local area. With one, games involving its locally blacked-out teams (from the map's NBA.com lookup) count as local blackouts, unless they're already on national TV.</li>
-        <li>Each team's last two games depend on the NBA Cup group stage and are added once the league schedules them in December.</li>
       </ul>
     </details>
   </aside>

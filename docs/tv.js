@@ -1,4 +1,4 @@
-// TV Schedule panel: the picked team's 82 games, as one bar (live on League Pass vs blacked out, by
+// Team and TV Schedule panel: the picked team's 82 games, as one bar (live on League Pass vs blacked out, by
 // network) over a game-by-game table, for a viewer outside every team's local area or, once a ZIP is
 // picked on the map, for that ZIP. Data:
 // data/schedule.json, built by scripts/fetch_schedule.py. The map (app.js) drives it through window.TV.
@@ -23,7 +23,7 @@ window.TV = (function () {
   let data, rows = [];
   let team = null; // team whose games are listed
   let zip = null; // { zip, name, local: [abbr] | null } from the map, or null for "outside every local area"
-  let hooks = { change() {}, clearZip() {} };
+  let hooks = { change() {}, clearZip() {}, pick() {} };
 
   const $ = (id) => document.getElementById(id);
   const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -77,7 +77,7 @@ window.TV = (function () {
   function renderContext() {
     const ctx = $("tv-context");
     if (!zip) {
-      ctx.innerHTML = "For a viewer outside every team's local area. <span class=\"muted\">Pick a ZIP on the map to add its local blackouts.</span>";
+      ctx.innerHTML = "For a viewer outside every team's local area. <span class=\"muted\">Enter your location above, or pick a ZIP on the map, to add its local blackouts.</span>";
       return;
     }
     const note = zip.local === null ? " NBA.com has no local blackout data for this ZIP."
@@ -110,10 +110,10 @@ window.TV = (function () {
 
   function renderGames() {
     const r = rows.find((x) => x.abbr === team);
+    $("team-pick").value = r ? team : "";
     $("games").hidden = !r;
     $("games-none").hidden = !!r;
     if (!r) return;
-    $("games-title").textContent = `${r.team.city} ${r.team.name}`;
     $("games").style.setProperty("--team", r.team.color);
     renderLegend(r);
     renderBar(r);
@@ -165,8 +165,15 @@ window.TV = (function () {
     team = opts.team || team;
     data = await (await fetch("data/schedule.json")).json();
     if (team && !(team in data.teams)) team = null;
+    // the team dropdown, by city; the map decides what picking one does (hooks.pick)
+    const pick = $("team-pick");
+    for (const [abbr, t] of Object.entries(data.teams).sort((a, b) => a[1].city.localeCompare(b[1].city))) {
+      pick.append(new Option(`${t.city} ${t.name}`, abbr));
+    }
+    pick.addEventListener("change", () => hooks.pick(pick.value));
     $("only-out").addEventListener("change", () => $("games-table").classList.toggle("out-only", $("only-out").checked));
     render();
+    if (team) hooks.change(team); // the link the map wrote before the schedule loaded lacks the team
 
     // tooltips for the bar's segments and the games' full labels (NBA Cup group, Rivals Week, ...):
     // hover on desktop, tap on touch

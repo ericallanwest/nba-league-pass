@@ -29,36 +29,41 @@
     },
     onRemove() {},
   }, "top-right");
-  // ---- panels: map settings on the left, TV Schedule on the right; each can be hidden ----
+  // ---- panels: team and TV Schedule on the left, map settings on the right; each can be hidden ----
   // Open/closed is remembered per browser; a link with tv=... opens the TV Schedule.
   const narrow = matchMedia("(max-width: 900px)"); // panels overlay the map, one at a time
   const tvParam = new URLSearchParams(location.hash.slice(1)).get("tv");
+  // the team picked last time, for a visit without a link's settings
+  const fresh = !location.hash;
+  let lastTeam = null;
+  try { lastTeam = localStorage.getItem("team"); } catch (e) {}
   let saved = {};
-  try { saved = JSON.parse(localStorage.getItem("panels")) || {}; } catch (e) {}
+  try { saved = JSON.parse(localStorage.getItem("panels2")) || {}; } catch (e) {}
   const PANELS = {
     panel: { el: document.getElementById("panel"), btn: document.getElementById("toggle-panel") },
     tv: { el: document.getElementById("tv"), btn: document.getElementById("toggle-tv") },
   };
   let afterPanels = () => {}; // set once the hash can be written
-  const HIDDEN_CLASS = { panel: "left-hidden", tv: "tv-hidden" };
+  const HIDDEN_CLASS = { panel: "panel-hidden", tv: "tv-hidden" };
   const isOpen = (which) => !document.body.classList.contains(HIDDEN_CLASS[which]);
   function setPanel(which, open, remember = true) {
     document.body.classList.toggle(HIDDEN_CLASS[which], !open);
     if (open && narrow.matches) document.body.classList.add(HIDDEN_CLASS[which === "tv" ? "panel" : "tv"]);
     for (const w in PANELS) { // arrows point the way the panel will move
       const shut = !isOpen(w), { btn } = PANELS[w], name = w === "tv" ? "the TV Schedule" : "the map settings";
-      btn.textContent = (w === "panel") === shut ? "▶" : "◀";
+      btn.textContent = (w === "tv") === shut ? "▶" : "◀";
       btn.setAttribute("aria-expanded", !shut);
       btn.setAttribute("aria-label", `${shut ? "Show" : "Hide"} ${name}`);
     }
     if (remember && !narrow.matches) {
       saved[which] = open;
-      try { localStorage.setItem("panels", JSON.stringify(saved)); } catch (e) {}
+      try { localStorage.setItem("panels2", JSON.stringify(saved)); } catch (e) {}
     }
     afterPanels();
   }
-  setPanel("panel", narrow.matches ? false : saved.panel ?? true, false);
-  setPanel("tv", tvParam ? true : narrow.matches ? false : saved.tv ?? innerWidth >= 1280, false);
+  // the team panel opens by default; the map settings too on a wide screen
+  setPanel("panel", narrow.matches ? false : saved.panel ?? innerWidth >= 1280, false);
+  setPanel("tv", tvParam || narrow.matches ? true : saved.tv ?? true, false);
   for (const which in PANELS) PANELS[which].btn.addEventListener("click", () => setPanel(which, !isOpen(which)));
   // the map fills whatever room the panels leave
   new ResizeObserver(() => map.resize()).observe(document.getElementById("map"));
@@ -124,8 +129,10 @@
   // ---- state (mirrored to the URL hash so views can be shared) ----
   const params = new URLSearchParams(location.hash.slice(1));
   const fromHash = params.get("teams");
+  const startTeam = fresh && teams.some((t) => t.abbr === lastTeam) ? lastTeam : null;
   let selected = new Set(
-    fromHash === null ? teams.map((t) => t.abbr) : fromHash.split(",").filter((a) => teams.some((t) => t.abbr === a))
+    startTeam ? [startTeam]
+      : fromHash === null ? teams.map((t) => t.abbr) : fromHash.split(",").filter((a) => teams.some((t) => t.abbr === a))
   );
   const showOther = document.getElementById("show-other");
   const rings = document.getElementById("rings");
@@ -180,7 +187,7 @@
     if (dist === "line") p.set("dist", "line");
     zip = zip || (shown ? shown[0] : ""); // keep an open popup's ZIP in the link
     if (zip) p.set("zip", zip);
-    if (isOpen("tv")) p.set("tv", TV.team || "1");
+    if (TV.team) p.set("tv", TV.team);
     const h = p.toString().replace(/%2C/g, ",");
     history.replaceState(null, "", h ? `#${h}` : location.pathname + location.search);
   }
@@ -207,10 +214,8 @@
     });
     // just this team: its dots, the map framed on them, and its games in the TV Schedule
     li.querySelector(".sched").addEventListener("click", () => {
-      solo(t.abbr);
-      zoomToTeam(i);
+      pickTeam(t.abbr);
       if (!narrow.matches) setPanel("tv", true); // on a phone the panel would cover the map
-      TV.show(t.abbr);
     });
     list.appendChild(li);
   }
@@ -259,6 +264,13 @@
   function solo(abbr) {
     selected = new Set([abbr]);
     update();
+  }
+  // a team picked from the dropdown or a team list's calendar icon: just its dots, the map framed
+  // on them, and its games in the TV Schedule
+  function pickTeam(abbr) {
+    solo(abbr);
+    zoomToTeam(teams.findIndex((t) => t.abbr === abbr));
+    TV.show(abbr);
   }
 
   // arena marker clicks: from the all-teams view, show just that team; after that each click
@@ -536,8 +548,12 @@
 
   // ---- TV Schedule panel ----
   TV.init({
-    team: /^[A-Z]{3}$/.test(tvParam || "") ? tvParam : null,
-    change: () => writeHash(),
+    team: /^[A-Z]{3}$/.test(tvParam || "") ? tvParam : startTeam,
+    pick: pickTeam,
+    change: (abbr) => {
+      try { if (abbr) localStorage.setItem("team", abbr); } catch (e) {}
+      writeHash();
+    },
     clearZip: () => popup.remove(),
   });
   afterPanels = () => writeHash();
@@ -797,6 +813,8 @@
     if (zip && /^\d{5}$/.test(zip)) {
       document.getElementById("zip").value = zip;
       search(zip);
+    } else if (startTeam) {
+      zoomToTeam(teams.findIndex((t) => t.abbr === startTeam)); // back to last visit's team
     }
   });
 })();

@@ -1,4 +1,4 @@
-/* TV Schedule panel (right side); colors come from style.css */
+/* team and TV Schedule panel (left side); colors come from style.css */
 :root {
   --abc: #2e2e2c; --espn: #52524e; --nbc: #767671; --peacock: #9a9a94; --prime: #bdbdb7;
   --local: #8c2d2d;
@@ -13,11 +13,11 @@
 :root[data-theme="dark"] { --abc: #e2e2de; --espn: #bdbdb7; --nbc: #98988f; --peacock: #74746e; --prime: #52524e; --local: #c65f5f; }
 
 #tv {
-  width: var(--rw); flex: none; height: 100%; overflow-y: auto;
-  background: var(--panel); border-left: 1px solid var(--border); padding: 12px 16px 24px;
+  width: var(--lw); flex: none; height: 100%; overflow-y: auto;
+  background: var(--panel); border-right: 1px solid var(--border); padding: 16px 16px 24px;
 }
 #tv .muted { color: var(--muted); }
-.tv-title { margin: 4px 0 8px; font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); white-space: nowrap; }
+.tv-title { margin: 8px 0 8px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); white-space: nowrap; }
 button.link { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; font: inherit; cursor: pointer; }
 #tv .lede { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
 #tv-context { margin: 0 0 12px; padding: 8px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); font-size: 13px; }
@@ -56,8 +56,6 @@ button.link { border: 0; background: none; padding: 0; color: var(--accent); tex
 
 #games { margin-top: 4px; }
 #games-none { margin: 4px 0 0; font-size: 13px; }
-.games-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
-#games-title { font-size: 15px; margin: 0; }
 #games-sum { margin: 6px 0 8px; font-size: 13px; }
 .games-tools { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
 .only-out { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-size: 13px; }
