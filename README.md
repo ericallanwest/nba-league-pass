@@ -1,6 +1,6 @@
-# NBA League Pass Blackout Map
+# NBA League Pass Team Guide
 
-Interactive web map (GitHub Pages, served from `docs/`) showing which NBA teams are locally blacked out on NBA League Pass for each US ZIP code. Successor to the [Tableau Public version](https://public.tableau.com/app/profile/ericallanwest/viz/NBALeaguePassBlackoutMap/NBALeaguePassBlackoutMap).
+Interactive guide (GitHub Pages, served from `docs/`) to how much of an NBA team's season you can watch live on NBA League Pass: its games on national TV, which League Pass blacks out everywhere, and the ZIP codes where it's locally blacked out. Successor to the [Tableau Public version](https://public.tableau.com/app/profile/ericallanwest/viz/NBALeaguePassBlackoutMap/NBALeaguePassBlackoutMap).
 
 ## Data
 
