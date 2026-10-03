@@ -91,6 +91,7 @@ button {
 button:hover { background: var(--hover); }
 #search-result { margin: 6px 0 0; }
 #search-result:empty { display: none; }
+#search-result .pick { margin: 4px 4px 0 0; padding: 2px 8px; font-size: 13px; }
 
 .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .bulk button { padding: 2px 8px; font-size: 12px; }
