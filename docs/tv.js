@@ -165,7 +165,7 @@ window.TV = (function () {
     team = opts.team || team;
     data = await (await fetch("data/schedule.json")).json();
     if (team && !(team in data.teams)) team = null;
-    // the team dropdown, by city; the map decides what picking one does (hooks.pick)
+    // the team dropdown, by city, after "All Teams"; the map decides what picking one does (hooks.pick)
     const pick = $("team-pick");
     for (const [abbr, t] of Object.entries(data.teams).sort((a, b) => a[1].city.localeCompare(b[1].city))) {
       pick.append(new Option(`${t.city} ${t.name}`, abbr));

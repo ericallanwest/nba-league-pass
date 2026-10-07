@@ -237,10 +237,7 @@
   const showAll = () => { selected = new Set(teams.map((t) => t.abbr)); focused = null; update(); };
   document.getElementById("all").onclick = showAll;
   document.getElementById("none").onclick = () => { selected = new Set(); focused = null; update(); };
-  document.getElementById("focus-all").onclick = () => {
-    showAll();
-    map.fitBounds(HOME, { padding: 20 });
-  };
+  document.getElementById("focus-all").onclick = () => pickTeam(null);
   for (const el of [showOther, rings, sizePop]) el.onchange = update;
   for (const r of document.querySelectorAll("#count input")) r.onchange = () => { mode = r.value; update(); };
   for (const r of document.querySelectorAll("#dist input")) r.onchange = () => {
@@ -272,8 +269,15 @@
   }
 
   // a team picked from the dropdown, a team list's calendar icon or its arena: team mode, with the
-  // map framed on its blacked-out ZIPs and its games in the TV Schedule
+  // map framed on its blacked-out ZIPs and its games in the TV Schedule. No team ("All Teams" in the
+  // dropdown, or "Show all teams"): every team's ZIPs at the home view, and no schedule
   function pickTeam(abbr) {
+    if (!abbr) {
+      showAll();
+      map.fitBounds(HOME, { padding: 20, bearing: 0, pitch: 0 });
+      TV.show(null);
+      return;
+    }
     selected = new Set([abbr]);
     focused = abbr;
     update();
@@ -565,7 +569,7 @@
     team: /^[A-Z]{3}$/.test(tvParam || "") ? tvParam : startTeam,
     pick: pickTeam,
     change: (abbr) => {
-      try { if (abbr) localStorage.setItem("team", abbr); } catch (e) {}
+      try { abbr ? localStorage.setItem("team", abbr) : localStorage.removeItem("team"); } catch (e) {}
       writeHash();
     },
     clearZip: () => popup.remove(),
